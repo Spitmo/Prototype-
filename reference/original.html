@@ -1,0 +1,1312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MindCare Campus - Digital Psychological Intervention System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #8b5cf6;
+            --accent: #ec4899;
+            --dark: #1e293b;
+            --light: #f8fafc;
+            --text: #334155;
+            --success: #10b981;
+            --warning: #f59e0b;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: var(--text);
+            overflow-x: hidden;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding-top: 5rem;
+        }
+
+        /* Animated Background */
+        .bg-animation {
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            z-index: -1;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            overflow: hidden;
+        }
+
+        .bg-animation::before {
+            content: '';
+            position: absolute;
+            width: 200%;
+            height: 200%;
+            top: -50%;
+            left: -50%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 1px, transparent 1px);
+            background-size: 50px 50px;
+            animation: bgMove 20s linear infinite;
+        }
+
+        @keyframes bgMove {
+            0% { transform: translate(0, 0); }
+            100% { transform: translate(50px, 50px); }
+        }
+
+        .floating-shapes {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+        }
+
+        .shape {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(5px);
+            border-radius: 50%;
+            animation: float 20s infinite ease-in-out;
+        }
+
+        .shape:nth-child(1) {
+            width: 80px;
+            height: 80px;
+            left: 10%;
+            animation-delay: 0s;
+        }
+
+        .shape:nth-child(2) {
+            width: 120px;
+            height: 120px;
+            right: 20%;
+            animation-delay: 5s;
+        }
+
+        .shape:nth-child(3) {
+            width: 60px;
+            height: 60px;
+            left: 50%;
+            animation-delay: 10s;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0) rotate(0deg); opacity: 0.5; }
+            50% { transform: translateY(-100px) rotate(180deg); opacity: 0.8; }
+        }
+
+        /* Navigation */
+        nav {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 1rem 2rem;
+            box-shadow: 0 2px 20px rgba(0,0,0,0.1);
+            position: sticky;
+            width: 100%;
+            top: 0;
+            z-index: 1000;
+            animation: slideDown 0.5s ease-out;
+        }
+
+        @keyframes slideDown {
+            from {
+                transform: translateY(-100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .nav-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .logo-icon {
+            width: 30px;
+            height: 30px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.2rem;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+            list-style: none;
+        }
+
+        .nav-links a {
+            color: var(--text);
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .nav-links a::after {
+            content: '';
+            position: absolute;
+            bottom: -5px;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: var(--primary);
+            transition: width 0.3s ease;
+        }
+
+        .nav-links a:hover::after {
+            width: 100%;
+        }
+
+        .emergency-btn {
+            background: linear-gradient(135deg, var(--accent), var(--primary));
+            color: white;
+            padding: 0.5rem 1.5rem;
+            border-radius: 25px;
+            text-decoration: none;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .emergency-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(236, 72, 153, 0.4);
+        }
+
+        /* Main Container */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 100px 2rem 2rem;
+        }
+
+        /* Hero Section */
+        .hero {
+            text-align: center;
+            padding: 4rem 0;
+            animation: fadeInUp 1s ease-out;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .hero h1 {
+            font-size: 3.5rem;
+            color: white;
+            margin-bottom: 1rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .hero p {
+            font-size: 1.3rem;
+            color: rgba(255, 255, 255, 0.9);
+            margin-bottom: 2rem;
+        }
+
+        .cta-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 1rem 2rem;
+            border-radius: 50px;
+            text-decoration: none;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            display: inline-block;
+            cursor: pointer;
+            border: none;
+            font-size: 1rem;
+        }
+
+        .btn-primary {
+            background: white;
+            color: var(--primary);
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: white;
+            border: 2px solid white;
+        }
+
+        .btn-secondary:hover {
+            background: white;
+            color: var(--primary);
+        }
+
+        /* Features Grid */
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-top: 4rem;
+        }
+
+        .feature-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 2rem;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            animation: fadeIn 1s ease-out;
+            animation-fill-mode: both;
+            cursor: pointer;
+        }
+
+        .feature-card:nth-child(1) { animation-delay: 0.1s; }
+        .feature-card:nth-child(2) { animation-delay: 0.2s; }
+        .feature-card:nth-child(3) { animation-delay: 0.3s; }
+        .feature-card:nth-child(4) { animation-delay: 0.4s; }
+        .feature-card:nth-child(5) { animation-delay: 0.5s; }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .feature-card:hover {
+            transform: translateY(-10px) scale(1.02);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+        }
+
+        .feature-icon {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            color: white;
+            margin-bottom: 1rem;
+        }
+
+        .feature-card h3 {
+            color: var(--dark);
+            margin-bottom: 0.5rem;
+            font-size: 1.3rem;
+        }
+
+        .feature-card p {
+            color: var(--text);
+            line-height: 1.6;
+        }
+
+        /* AI Chat Interface */
+        .chat-container {
+            background: white;
+            border-radius: 20px;
+            padding: 2rem;
+            margin-top: 3rem;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.1);
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .chat-header {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            padding: 1rem;
+            border-radius: 15px 15px 0 0;
+            margin: -2rem -2rem 1rem -2rem;
+            text-align: center;
+        }
+
+        .chat-messages {
+            height: 400px;
+            overflow-y: auto;
+            padding: 1rem;
+            background: var(--light);
+            border-radius: 10px;
+            margin-bottom: 1rem;
+        }
+
+        .message {
+            margin-bottom: 1rem;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .message.user {
+            text-align: right;
+        }
+
+        .message-bubble {
+            display: inline-block;
+            padding: 0.8rem 1.2rem;
+            border-radius: 20px;
+            max-width: 70%;
+        }
+
+        .message.bot .message-bubble {
+            background: white;
+            color: var(--text);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .message.user .message-bubble {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+        }
+
+        .chat-input-container {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .chat-input {
+            flex: 1;
+            padding: 1rem;
+            border: 2px solid #e2e8f0;
+            border-radius: 50px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .chat-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+
+        .send-btn {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: 50px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+
+        .send-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 20px rgba(99, 102, 241, 0.4);
+        }
+
+        /* Booking System */
+        .booking-section {
+            background: white;
+            border-radius: 20px;
+            padding: 2rem;
+            margin-top: 3rem;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.1);
+        }
+
+        .booking-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .booking-header h2 {
+            color: var(--dark);
+            margin-bottom: 0.5rem;
+        }
+
+        .counselor-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .counselor-card {
+            border: 2px solid #e2e8f0;
+            border-radius: 15px;
+            padding: 1.5rem;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .counselor-card:hover {
+            border-color: var(--primary);
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        .counselor-avatar {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border-radius: 50%;
+            margin: 0 auto 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 2rem;
+        }
+
+        .availability {
+            display: inline-block;
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            margin-top: 0.5rem;
+        }
+
+        .available {
+            background: #d1fae5;
+            color: var(--success);
+        }
+
+        .busy {
+            background: #fee2e2;
+            color: #ef4444;
+        }
+
+        /* Resources Hub */
+        .resources-section {
+            margin-top: 3rem;
+        }
+
+        .resource-tabs {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .tab {
+            padding: 0.8rem 1.5rem;
+            background: white;
+            border: 2px solid #e2e8f0;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+
+        .tab.active {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            border-color: transparent;
+        }
+
+        .tab:hover:not(.active) {
+            border-color: var(--primary);
+            transform: translateY(-2px);
+        }
+
+        .resource-content {
+            background: white;
+            border-radius: 20px;
+            padding: 2rem;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        .resource-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .resource-item {
+            background: var(--light);
+            padding: 1.5rem;
+            border-radius: 15px;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .resource-item:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+
+        .resource-icon {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        /* Admin Dashboard */
+        .dashboard-section {
+            background: white;
+            border-radius: 20px;
+            padding: 2rem;
+            margin-top: 3rem;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.1);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            padding: 1.5rem;
+            border-radius: 15px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 200%;
+            height: 200%;
+            background: rgba(255, 255, 255, 0.1);
+            transform: rotate(45deg);
+            animation: shimmer 3s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { transform: translateX(-100%) rotate(45deg); }
+            100% { transform: translateX(100%) rotate(45deg); }
+        }
+
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+
+        .chart-container {
+            background: var(--light);
+            padding: 1.5rem;
+            border-radius: 15px;
+            height: 300px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text);
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            backdrop-filter: blur(5px);
+            z-index: 2000;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .modal.active {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 2rem;
+            border-radius: 20px;
+            max-width: 500px;
+            width: 90%;
+            animation: slideUp 0.3s ease;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .close-modal {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--text);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 2rem;
+            }
+            
+            .nav-links {
+                display: none;
+            }
+            
+            .features {
+                grid-template-columns: 1fr;
+            }
+            
+            .counselor-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Loading Animation */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Peer Support Forum */
+        .forum-section {
+            background: white;
+            border-radius: 20px;
+            padding: 2rem;
+            margin-top: 3rem;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.1);
+        }
+
+        .forum-post {
+            border-bottom: 1px solid #e2e8f0;
+            padding: 1.5rem 0;
+            transition: all 0.3s ease;
+        }
+
+        .forum-post:hover {
+            padding-left: 1rem;
+            background: var(--light);
+            margin: 0 -1rem;
+            padding-right: 1rem;
+        }
+
+        .post-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .post-author {
+            font-weight: bold;
+            color: var(--primary);
+        }
+
+        .post-time {
+            color: #94a3b8;
+            font-size: 0.9rem;
+        }
+
+        .post-tags {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+
+        .tag {
+            background: #e0e7ff;
+            color: var(--primary);
+            padding: 0.2rem 0.6rem;
+            border-radius: 15px;
+            font-size: 0.85rem;
+        }
+    </style>
+</head>
+<body>
+    <!-- Background Animation -->
+    <div class="bg-animation">
+        <div class="floating-shapes">
+            <div class="shape"></div>
+            <div class="shape"></div>
+            <div class="shape"></div>
+        </div>
+    </div>
+
+    <!-- Navigation -->
+    <nav>
+        <div class="nav-container">
+            <div class="logo">
+                <div class="logo-icon">🧠</div>
+                MindCare Campus
+            </div>
+            <ul class="nav-links">
+                <li><a href="#home">Home</a></li>
+                <li><a href="#chat">AI Support</a></li>
+                <li><a href="#booking">Book Session</a></li>
+                <li><a href="#resources">Resources</a></li>
+                <li><a href="#forum">Peer Support</a></li>
+                <li><a href="#dashboard">Dashboard</a></li>
+            </ul>
+            <a href="#" class="emergency-btn" onclick="showEmergencyModal()">🆘 Crisis Help</a>
+        </div>
+    </nav>
+
+    <!-- Main Container -->
+    <div class="container">
+        <!-- Hero Section -->
+        <section id="home" class="hero">
+            <h1>Your Mental Wellness Journey Starts Here</h1>
+            <p>Confidential, Culturally-Sensitive, and Always Available Support for College Students</p>
+            <div class="cta-buttons">
+                <button class="btn btn-primary" onclick="scrollToChat()">Start AI Chat Support</button>
+                <button class="btn btn-secondary" onclick="scrollToBooking()">Book Counselor Session</button>
+            </div>
+        </section>
+
+        <!-- Features Grid -->
+        <section class="features">
+            <div class="feature-card" onclick="scrollToChat()">
+                <div class="feature-icon">💬</div>
+                <h3>AI-Guided First Aid</h3>
+                <p>24/7 intelligent chatbot offering immediate coping strategies and professional referrals when needed.</p>
+            </div>
+            <div class="feature-card" onclick="scrollToBooking()">
+                <div class="feature-icon">📅</div>
+                <h3>Confidential Booking</h3>
+                <p>Secure appointment scheduling with on-campus counselors. Complete privacy guaranteed.</p>
+            </div>
+            <div class="feature-card" onclick="scrollToResources()">
+                <div class="feature-icon">📚</div>
+                <h3>Resource Hub</h3>
+                <p>Videos, audio guides, and wellness materials available in multiple regional languages.</p>
+            </div>
+            <div class="feature-card" onclick="scrollToForum()">
+                <div class="feature-icon">🤝</div>
+                <h3>Peer Support</h3>
+                <p>Moderated forums with trained student volunteers for community support.</p>
+            </div>
+            <div class="feature-card" onclick="scrollToDashboard()">
+                <div class="feature-icon">📊</div>
+                <h3>Analytics Dashboard</h3>
+                <p>Real-time insights for administrators to track wellness trends and plan interventions.</p>
+            </div>
+        </section>
+
+        <!-- AI Chat Interface -->
+        <section id="chat" class="chat-container">
+            <div class="chat-header">
+                <h2>MindCare Bot</h2>
+                <p>I'm here to listen and help. Everything you share is confidential.</p>
+            </div>
+            <div class="chat-messages" id="chatMessages">
+                <div class="message bot">
+                    <div class="message-bubble">
+                        Hello! I'm your mental health support assistant. How are you feeling today? Remember, this is a safe space to share your thoughts and feelings.
+                    </div>
+                </div>
+            </div>
+            <div class="chat-input-container">
+                <input type="text" class="chat-input" id="chatInput" placeholder="Type your message here..." onkeypress="handleKeyPress(event)">
+                <button class="send-btn" onclick="sendMessage()">Send</button>
+            </div>
+        </section>
+
+        <!-- Booking System -->
+        <section id="booking" class="booking-section">
+            <div class="booking-header">
+                <h2>Book a Confidential Session</h2>
+                <p>Choose from our qualified counselors and mental health professionals</p>
+            </div>
+            <div class="counselor-grid">
+                <div class="counselor-card" onclick="bookCounselor('Dr. Priya Sharma')">
+                    <div class="counselor-avatar">PS</div>
+                    <h4>Dr. Priya Sharma</h4>
+                    <p>Clinical Psychologist</p>
+                    <p style="font-size: 0.9rem; color: #64748b;">Specializes in anxiety & stress</p>
+                    <div class="availability available">Available Today</div>
+                </div>
+                <div class="counselor-card" onclick="bookCounselor('Mr. Rahul Verma')">
+                    <div class="counselor-avatar">RV</div>
+                    <h4>Mr. Rahul Verma</h4>
+                    <p>Counseling Psychologist</p>
+                    <p style="font-size: 0.9rem; color: #64748b;">Academic stress & relationships</p>
+                    <div class="availability available">Available Today</div>
+                </div>
+                <div class="counselor-card" onclick="bookCounselor('Dr. Anita Desai')">
+                    <div class="counselor-avatar">AD</div>
+                    <h4>Dr. Anita Desai</h4>
+                    <p>Senior Counselor</p>
+                    <p style="font-size: 0.9rem; color: #64748b;">Depression & trauma support</p>
+                    <div class="availability busy">Next Available: Tomorrow</div>
+                </div>
+                <div class="counselor-card" onclick="bookCounselor('Ms. Kavita Singh')">
+                    <div class="counselor-avatar">KS</div>
+                    <h4>Ms. Kavita Singh</h4>
+                    <p>Wellness Coach</p>
+                    <p style="font-size: 0.9rem; color: #64748b;">Mindfulness & self-care</p>
+                    <div class="availability available">Available Today</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Resources Hub -->
+        <section id="resources" class="resources-section">
+            <div class="resource-tabs">
+                <div class="tab active" onclick="switchTab(this, 'videos')">Videos</div>
+                <div class="tab" onclick="switchTab(this, 'audio')">Audio Guides</div>
+                <div class="tab" onclick="switchTab(this, 'articles')">Articles</div>
+                <div class="tab" onclick="switchTab(this, 'exercises')">Exercises</div>
+            </div>
+            <div class="resource-content">
+                <div id="videos" class="resource-grid">
+                    <div class="resource-item" onclick="playResource('video', 'Meditation Basics')">
+                        <div class="resource-icon">🎥</div>
+                        <h4>Meditation Basics</h4>
+                        <p>10 min • Hindi/English</p>
+                    </div>
+                    <div class="resource-item" onclick="playResource('video', 'Stress Management')">
+                        <div class="resource-icon">🎥</div>
+                        <h4>Stress Management</h4>
+                        <p>15 min • Multiple Languages</p>
+                    </div>
+                    <div class="resource-item" onclick="playResource('video', 'Better Sleep Tips')">
+                        <div class="resource-icon">🎥</div>
+                        <h4>Better Sleep Tips</h4>
+                        <p>8 min • Hindi/English</p>
+                    </div>
+                    <div class="resource-item" onclick="playResource('video', 'Exam Anxiety')">
+                        <div class="resource-icon">🎥</div>
+                        <h4>Dealing with Exam Anxiety</h4>
+                        <p>12 min • Regional Languages</p>
+                    </div>
+                </div>
+                <div id="audio" class="resource-grid" style="display: none;">
+                    <div class="resource-item" onclick="playResource('audio', 'Guided Relaxation')">
+                        <div class="resource-icon">🎧</div>
+                        <h4>Guided Relaxation</h4>
+                        <p>20 min • Hindi</p>
+                    </div>
+                    <div class="resource-item" onclick="playResource('audio', 'Breathing Exercises')">
+                        <div class="resource-icon">🎧</div>
+                        <h4>Breathing Exercises</h4>
+                        <p>10 min • Multiple Languages</p>
+                    </div>
+                </div>
+                <div id="articles" class="resource-grid" style="display: none;">
+                    <div class="resource-item" onclick="playResource('article', 'Understanding Depression')">
+                        <div class="resource-icon">📄</div>
+                        <h4>Understanding Depression</h4>
+                        <p>5 min read</p>
+                    </div>
+                    <div class="resource-item" onclick="playResource('article', 'Building Resilience')">
+                        <div class="resource-icon">📄</div>
+                        <h4>Building Resilience</h4>
+                        <p>7 min read</p>
+                    </div>
+                </div>
+                <div id="exercises" class="resource-grid" style="display: none;">
+                    <div class="resource-item" onclick="playResource('exercise', 'Journaling Prompts')">
+                        <div class="resource-icon">✍️</div>
+                        <h4>Journaling Prompts</h4>
+                        <p>Daily exercises</p>
+                    </div>
+                    <div class="resource-item" onclick="playResource('exercise', 'Mindfulness Activities')">
+                        <div class="resource-icon">🧘</div>
+                        <h4>Mindfulness Activities</h4>
+                        <p>5-minute practices</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Peer Support Forum -->
+        <section id="forum" class="forum-section">
+            <div class="booking-header">
+                <h2>Peer Support Community</h2>
+                <p>Connect with fellow students in a safe, moderated environment</p>
+            </div>
+            <button class="btn btn-primary" onclick="createPost()" style="margin-bottom: 2rem;">Share Your Story</button>
+            <div id="forumPosts">
+                <div class="forum-post">
+                    <div class="post-header">
+                        <span class="post-author">Anonymous Student</span>
+                        <span class="post-time">2 hours ago</span>
+                    </div>
+                    <p>Feeling overwhelmed with semester exams. Found some peace through the meditation videos here. Anyone else dealing with exam stress?</p>
+                    <div class="post-tags">
+                        <span class="tag">Exam Stress</span>
+                        <span class="tag">Support</span>
+                    </div>
+                </div>
+                <div class="forum-post">
+                    <div class="post-header">
+                        <span class="post-author">Peer Volunteer - Raj</span>
+                        <span class="post-time">5 hours ago</span>
+                    </div>
+                    <p>Remember, it's okay to take breaks. Your mental health is as important as your grades. Here if anyone needs to talk! 💙</p>
+                    <div class="post-tags">
+                        <span class="tag">Encouragement</span>
+                        <span class="tag">Self-Care</span>
+                    </div>
+                </div>
+                <div class="forum-post">
+                    <div class="post-header">
+                        <span class="post-author">Anonymous Student</span>
+                        <span class="post-time">1 day ago</span>
+                    </div>
+                    <p>First time reaching out. The loneliness in hostel is getting to me. How do you all cope with homesickness?</p>
+                    <div class="post-tags">
+                        <span class="tag">Homesickness</span>
+                        <span class="tag">First Year</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Admin Dashboard -->
+        <section id="dashboard" class="dashboard-section">
+            <div class="booking-header">
+                <h2>Wellness Analytics Dashboard</h2>
+                <p>Real-time insights for institutional mental health trends</p>
+            </div>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-number" id="activeUsers">247</div>
+                    <p>Active Users This Week</p>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="sessionsBooked">68</div>
+                    <p>Sessions Booked</p>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="avgMoodScore">7.2</div>
+                    <p>Average Mood Score</p>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="resourceViews">1,432</div>
+                    <p>Resource Views</p>
+                </div>
+            </div>
+            <div class="chart-container">
+                <canvas id="trendsChart"></canvas>
+                <p style="text-align: center;">Weekly Mental Health Trends - Interactive Chart</p>
+            </div>
+        </section>
+    </div>
+
+    <!-- Emergency Modal -->
+    <div id="emergencyModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Crisis Support</h2>
+                <button class="close-modal" onclick="closeModal('emergencyModal')">×</button>
+            </div>
+            <p style="margin-bottom: 1rem;">If you're in immediate danger, please contact:</p>
+            <div style="background: #fee2e2; padding: 1rem; border-radius: 10px; margin-bottom: 1rem;">
+                <p><strong>National Suicide Prevention Helpline:</strong> 9152987821</p>
+                <p><strong>Emergency Services:</strong> 112</p>
+                <p><strong>Campus Counselor Emergency:</strong> Available 24/7</p>
+            </div>
+            <button class="btn btn-primary" onclick="connectEmergency()" style="width: 100%;">Connect with Crisis Counselor Now</button>
+        </div>
+    </div>
+
+    <!-- Booking Modal -->
+    <div id="bookingModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Book Appointment</h2>
+                <button class="close-modal" onclick="closeModal('bookingModal')">×</button>
+            </div>
+            <form id="bookingForm" onsubmit="submitBooking(event)">
+                <div style="margin-bottom: 1rem;">
+                    <label style="display: block; margin-bottom: 0.5rem; font-weight: bold;">Counselor</label>
+                    <input type="text" id="selectedCounselor" readonly style="width: 100%; padding: 0.8rem; border: 2px solid #e2e8f0; border-radius: 10px;">
+                </div>
+                <div style="margin-bottom: 1rem;">
+                    <label style="display: block; margin-bottom: 0.5rem; font-weight: bold;">Preferred Date</label>
+                    <input type="date" required style="width: 100%; padding: 0.8rem; border: 2px solid #e2e8f0; border-radius: 10px;">
+                </div>
+                <div style="margin-bottom: 1rem;">
+                    <label style="display: block; margin-bottom: 0.5rem; font-weight: bold;">Time Slot</label>
+                    <select required style="width: 100%; padding: 0.8rem; border: 2px solid #e2e8f0; border-radius: 10px;">
+                        <option value="">Select a time</option>
+                        <option value="9:00 AM">9:00 AM</option>
+                        <option value="10:00 AM">10:00 AM</option>
+                        <option value="11:00 AM">11:00 AM</option>
+                        <option value="2:00 PM">2:00 PM</option>
+                        <option value="3:00 PM">3:00 PM</option>
+                        <option value="4:00 PM">4:00 PM</option>
+                    </select>
+                </div>
+                <div style="margin-bottom: 1rem;">
+                    <label style="display: block; margin-bottom: 0.5rem; font-weight: bold;">Session Type</label>
+                    <select required style="width: 100%; padding: 0.8rem; border: 2px solid #e2e8f0; border-radius: 10px;">
+                        <option value="in-person">In-Person</option>
+                        <option value="video">Video Call</option>
+                        <option value="phone">Phone Call</option>
+                    </select>
+                </div>
+                <div style="margin-bottom: 1.5rem;">
+                    <label style="display: block; margin-bottom: 0.5rem; font-weight: bold;">Brief Description (Optional)</label>
+                    <textarea style="width: 100%; padding: 0.8rem; border: 2px solid #e2e8f0; border-radius: 10px; resize: vertical; min-height: 80px;" placeholder="Share what you'd like to discuss..."></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%;">Confirm Booking</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Chat functionality
+        const chatResponses = {
+            greeting: ["Hello! I'm here to support you. How are you feeling today?", "Hi there! What's on your mind today?"],
+            anxiety: ["I understand you're feeling anxious. Let's try a breathing exercise. Breathe in for 4 counts, hold for 4, and release for 4. Would you like me to guide you through some coping strategies?"],
+            depression: ["I hear that you're going through a difficult time. You're not alone. Would you like to explore some self-care activities or talk to a counselor?"],
+            stress: ["Stress can be overwhelming. Let's work through this together. What specific situation is causing you the most stress right now?"],
+            sleep: ["Sleep issues can really affect your wellbeing. Have you tried our guided sleep meditation? I can also share some sleep hygiene tips."],
+            default: ["Thank you for sharing. Could you tell me more about what you're experiencing?", "I'm here to listen. What would be most helpful for you right now?"]
+        };
+
+        function sendMessage() {
+            const input = document.getElementById('chatInput');
+            const message = input.value.trim();
+            if (!message) return;
+
+            const messagesDiv = document.getElementById('chatMessages');
+            
+            // Add user message
+            const userMsg = document.createElement('div');
+            userMsg.className = 'message user';
+            userMsg.innerHTML = `<div class="message-bubble">${message}</div>`;
+            messagesDiv.appendChild(userMsg);
+
+            // Clear input
+            input.value = '';
+
+            // Simulate bot response
+            setTimeout(() => {
+                const botMsg = document.createElement('div');
+                botMsg.className = 'message bot';
+                
+                let response;
+                const lowerMessage = message.toLowerCase();
+                if (lowerMessage.includes('anxious') || lowerMessage.includes('anxiety')) {
+                    response = chatResponses.anxiety[0];
+                } else if (lowerMessage.includes('depressed') || lowerMessage.includes('sad')) {
+                    response = chatResponses.depression[0];
+                } else if (lowerMessage.includes('stress') || lowerMessage.includes('exam')) {
+                    response = chatResponses.stress[0];
+                } else if (lowerMessage.includes('sleep') || lowerMessage.includes('insomnia')) {
+                    response = chatResponses.sleep[0];
+                } else if (lowerMessage.includes('hello') || lowerMessage.includes('hi')) {
+                    response = chatResponses.greeting[Math.floor(Math.random() * chatResponses.greeting.length)];
+                } else {
+                    response = chatResponses.default[Math.floor(Math.random() * chatResponses.default.length)];
+                }
+
+                botMsg.innerHTML = `<div class="message-bubble">${response}</div>`;
+                messagesDiv.appendChild(botMsg);
+                messagesDiv.scrollTop = messagesDiv.scrollHeight;
+            }, 1000);
+
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        }
+
+        // Booking functionality
+        function bookCounselor(counselorName) {
+            document.getElementById('selectedCounselor').value = counselorName;
+            document.getElementById('bookingModal').classList.add('active');
+        }
+
+        function submitBooking(event) {
+            event.preventDefault();
+            alert('Booking confirmed! You will receive a confirmation email shortly. Remember, all sessions are completely confidential.');
+            closeModal('bookingModal');
+        }
+
+        // Tab switching
+        function switchTab(tabElement, contentId) {
+            // Remove active class from all tabs
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            tabElement.classList.add('active');
+
+            // Hide all content
+            document.querySelectorAll('.resource-grid').forEach(grid => grid.style.display = 'none');
+            
+            // Show selected content
+            document.getElementById(contentId).style.display = 'grid';
+        }
+
+        // Resource player
+        function playResource(type, title) {
+            alert(`Opening ${type}: ${title}\n\nThis would open the resource in a player or new window with language selection options.`);
+        }
+
+        // Forum functionality
+        function createPost() {
+            const content = prompt('Share your thoughts (you can post anonymously):');
+            if (content) {
+                const forumPosts = document.getElementById('forumPosts');
+                const newPost = document.createElement('div');
+                newPost.className = 'forum-post';
+                newPost.innerHTML = `
+                    <div class="post-header">
+                        <span class="post-author">You (Anonymous)</span>
+                        <span class="post-time">Just now</span>
+                    </div>
+                    <p>${content}</p>
+                    <div class="post-tags">
+                        <span class="tag">New</span>
+                    </div>
+                `;
+                forumPosts.insertBefore(newPost, forumPosts.firstChild);
+            }
+        }
+
+        // Modal functionality
+        function showEmergencyModal() {
+            document.getElementById('emergencyModal').classList.add('active');
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('active');
+        }
+
+        function connectEmergency() {
+            alert('Connecting you to a crisis counselor immediately...\n\nA trained professional will be with you in seconds.');
+            closeModal('emergencyModal');
+        }
+
+        // Smooth scrolling
+        function scrollToChat() {
+            document.getElementById('chat').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function scrollToBooking() {
+            document.getElementById('booking').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function scrollToResources() {
+            document.getElementById('resources').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function scrollToForum() {
+            document.getElementById('forum').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function scrollToDashboard() {
+            document.getElementById('dashboard').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // Simulate real-time dashboard updates
+        setInterval(() => {
+            const activeUsers = document.getElementById('activeUsers');
+            const current = parseInt(activeUsers.textContent);
+            activeUsers.textContent = current + Math.floor(Math.random() * 3 - 1);
+
+            const resourceViews = document.getElementById('resourceViews');
+            const currentViews = parseInt(resourceViews.textContent.replace(',', ''));
+            resourceViews.textContent = (currentViews + Math.floor(Math.random() * 5)).toLocaleString();
+        }, 5000);
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            // Set current date for booking
+            const today = new Date().toISOString().split('T')[0];
+            const dateInputs = document.querySelectorAll('input[type="date"]');
+            dateInputs.forEach(input => {
+                input.min = today;
+                input.value = today;
+            });
+        });
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            if (event.target.classList.contains('modal')) {
+                event.target.classList.remove('active');
+            }
+        }
+    </script>
+</body>
+</html>
