@@ -6,6 +6,8 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Send, Bot, User, Mic } from "lucide-react"
 import { useSpeechToText } from "@/hooks/useSpeechToText"
+import ChatbotLoginModal from "./chatbot-login-model"
+import { useAuth } from "../lib/useAuth"
 
 interface Message {
   id: string
@@ -15,6 +17,8 @@ interface Message {
 }
 
 export default function AIChatInterface() {
+  const { user, loading } = useAuth()
+  const [loginOpen, setLoginOpen] = useState(false)
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "1",
@@ -98,6 +102,11 @@ export default function AIChatInterface() {
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") handleSendMessage()
+  }
+
+  // Show modal if not logged in and not loading
+  if (!loading && !user) {
+    return <ChatbotLoginModal open={true} onOpenChange={() => {}} />
   }
 
   return (
