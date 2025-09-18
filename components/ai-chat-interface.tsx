@@ -1,11 +1,13 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
+import { auth } from "@/lib/firebase"
+import { onAuthStateChanged, User } from "firebase/auth"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Send, Bot, User, Mic } from "lucide-react"
-import { useSpeechToText } from "@/hooks/useSpeechToText"
+import { Send, Bot, User as UserIcon } from "lucide-react"
+import AuthBanner from "./AuthBanner"
 
 interface Message {
   id: string
@@ -18,29 +20,80 @@ export default function AIChatInterface() {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "1",
-      content: "Hi! I'm your friendly AI buddy 😊 What's on your mind today? Let's chat!",
+      content: "Hi! I'm your friendly AI buddy 😊 What's on your mind today?",
       isBot: true,
       timestamp: new Date(),
     },
   ])
   const [inputValue, setInputValue] = useState("")
   const [isTyping, setIsTyping] = useState(false)
+  const [currentUser, setCurrentUser] = useState<User | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
-  }
-
+  // Scroll to bottom
   useEffect(() => {
-    scrollToBottom()
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [messages])
 
-  // --- Speech to text hook ---
-  const { transcript, isListening, startListening, stopListening } = useSpeechToText()
+  // Track Firebase user
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, (user) => setCurrentUser(user))
+    return () => unsub()
+  }, [])
+
+  // Guest mode: store in localStorage
+  useEffect(() => {
+    if (!currentUser) {
+      localStorage.setItem("guestChat", JSON.stringify(messages))
+    }
+  }, [messages, currentUser])
 
   useEffect(() => {
-    if (transcript) setInputValue(transcript)
-  }, [transcript])
+    if (!currentUser) {
+      const saved = localStorage.getItem("guestChat")
+      if (saved) setMessages(JSON.parse(saved))
+    }
+  }, [currentUser])
+
+  useEffect(() => {
+    if (currentUser) {
+      // Fetch chat history from BigQuery via your API
+      fetch(`/api/chat/history?userId=${currentUser.uid}`)
+        .then((res) => res.json())
+        .then((data) => {
+          // Convert timestamp to Date if needed
+          const loaded = data.map((msg: any) => ({
+            ...msg,
+            timestamp: new Date(msg.timestamp),
+            isBot: msg.isBot ?? false, // fallback if not present
+            id: msg.id?.toString() ?? Date.now().toString(),
+          }))
+          setMessages(
+            loaded.length > 0
+              ? loaded
+              : [
+                  {
+                    id: "1",
+                    content: "Hi! I'm your friendly AI buddy 😊 What's on your mind today?",
+                    isBot: true,
+                    timestamp: new Date(),
+                  },
+                ]
+          )
+        })
+        .catch(() => {
+          // fallback to default message if error
+          setMessages([
+            {
+              id: "1",
+              content: "Hi! I'm your friendly AI buddy 😊 What's on your mind today?",
+              isBot: true,
+              timestamp: new Date(),
+            },
+          ])
+        })
+    }
+  }, [currentUser])
 
   const handleSendMessage = async () => {
     if (!inputValue.trim()) return
@@ -57,7 +110,6 @@ export default function AIChatInterface() {
     setIsTyping(true)
 
     try {
-      // Map messages to OpenRouter / backend format
       const chatMessages = [
         ...messages.map((m) => ({
           role: m.isBot ? "assistant" : "user",
@@ -82,113 +134,81 @@ export default function AIChatInterface() {
       }
 
       setMessages((prev) => [...prev, botMessage])
-    } catch (error) {
-      console.error("Error fetching bot response:", error)
-      const errorMessage: Message = {
-        id: (Date.now() + 2).toString(),
-        content: "Sorry, something went wrong. Please try again.",
-        isBot: true,
-        timestamp: new Date(),
+
+      if (currentUser) {
+        // Save user message
+        await fetch("/api/chat/send", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            userId: currentUser.uid,
+            text: userMessage.content,
+            isBot: false,
+            timestamp: userMessage.timestamp.toISOString(),
+          }),
+        })
+        // Save bot message
+        await fetch("/api/chat/send", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            userId: currentUser.uid,
+            text: botMessage.content,
+            isBot: true,
+            timestamp: botMessage.timestamp.toISOString(),
+          }),
+        })
       }
-      setMessages((prev) => [...prev, errorMessage])
+    } catch (error) {
+      setMessages((prev) => [
+        ...prev,
+        { id: "error", content: "Error fetching response.", isBot: true, timestamp: new Date() },
+      ])
     } finally {
       setIsTyping(false)
     }
   }
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") handleSendMessage()
-  }
-
   return (
-    <section id="chat" className="py-16">
-      <Card className="max-w-4xl mx-auto">
-        <CardHeader className="text-center bg-gradient-calm">
-          <div className="relative inline-block p-4 mb-2">
-            <div className="absolute inset-0 bg-gradient-to-r from-orange-500 via-white to-green-600 p-0.5 rounded-lg">
-              <div className="bg-white rounded-lg h-full w-full"></div>
-            </div>
-            <div className="relative">
-              <CardTitle className="text-2xl text-black">AI Mental Health Assistant</CardTitle>
-            </div>
-          </div>
-          <p className="text-muted-foreground">
-            I'm here to listen and help. Everything you share is confidential.
-          </p>
+    <section id="chat" className="py-8">
+      <Card className="max-w-3xl mx-auto">
+        <CardHeader className="text-center bg-gradient-to-r from-orange-300 to-green-300">
+          <CardTitle className="text-2xl">AI Mental Health Assistant</CardTitle>
         </CardHeader>
-        <CardContent className="p-0">
-          <div className="h-96 overflow-y-auto p-4 space-y-4">
-            {messages.map((message) => (
-              <div
-                key={message.id}
-                className={`flex ${message.isBot ? "justify-start" : "justify-end"}`}
-              >
-                <div
-                  className={`flex items-start space-x-2 max-w-xs lg:max-w-md ${
-                    message.isBot ? "" : "flex-row-reverse space-x-reverse"
-                  }`}
-                >
-                  <div
-                    className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                      message.isBot ? "bg-primary" : "bg-secondary"
-                    }`}
-                  >
-                    {message.isBot ? (
-                      <Bot className="w-4 h-4 text-primary-foreground" />
-                    ) : (
-                      <User className="w-4 h-4 text-secondary-foreground" />
-                    )}
+        <CardContent>
+          <AuthBanner />
+
+          <div className="h-80 overflow-y-auto p-4 space-y-3">
+            {messages.map((m) => (
+              <div key={m.id} className={`flex ${m.isBot ? "justify-start" : "justify-end"}`}>
+                <div className="flex items-center space-x-2 max-w-md">
+                  <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
+                    {m.isBot ? <Bot className="w-4 h-4" /> : <UserIcon className="w-4 h-4" />}
                   </div>
                   <div
-                    className={`p-3 rounded-lg ${
-                      message.isBot ? "bg-muted text-foreground" : "bg-primary text-primary-foreground"
+                    className={`p-2 rounded-lg ${
+                      m.isBot ? "bg-gray-100 text-black" : "bg-blue-500 text-white"
                     }`}
                   >
-                    <p className="text-sm">{message.content}</p>
+                    {m.content}
                   </div>
                 </div>
               </div>
             ))}
-            {isTyping && (
-              <div className="flex justify-start">
-                <div className="flex items-start space-x-2 max-w-xs lg:max-w-md">
-                  <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
-                    <Bot className="w-4 h-4 text-primary-foreground" />
-                  </div>
-                  <div className="p-3 rounded-lg bg-muted">
-                    <div className="flex space-x-1">
-                      <div className="w-2 h-2 bg-primary rounded-full animate-bounce"></div>
-                      <div
-                        className="w-2 h-2 bg-primary rounded-full animate-bounce"
-                        style={{ animationDelay: "0.1s" }}
-                      ></div>
-                      <div
-                        className="w-2 h-2 bg-primary rounded-full animate-bounce"
-                        style={{ animationDelay: "0.2s" }}
-                      ></div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
+            {isTyping && <p className="text-sm text-gray-400">Bot is typing...</p>}
             <div ref={messagesEndRef} />
           </div>
-          <div className="p-4 border-t border-border">
-            <div className="flex space-x-2">
-              <Input
-                value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
-                onKeyPress={handleKeyPress}
-                placeholder="Type or speak your message..."
-                className="flex-1"
-              />
-              <Button onClick={handleSendMessage} disabled={!inputValue.trim() || isTyping}>
-                <Send className="w-4 h-4" />
-              </Button>
-              <Button onClick={isListening ? stopListening : startListening}>
-                <Mic className="w-4 h-4" /> {isListening ? "Stop" : "Speak"}
-              </Button>
-            </div>
+
+          <div className="flex space-x-2 mt-2">
+            <Input
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              placeholder="Type a message..."
+              onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
+            />
+            <Button onClick={handleSendMessage}>
+              <Send className="w-4 h-4" />
+            </Button>
           </div>
         </CardContent>
       </Card>
