@@ -42,6 +42,7 @@ export default function AIChatInterface() {
     if (transcript) setInputValue(transcript)
   }, [transcript])
 
+  // 🔥 Updated handleSendMessage with Firestore save
   const handleSendMessage = async () => {
     if (!inputValue.trim()) return
 
@@ -57,7 +58,18 @@ export default function AIChatInterface() {
     setIsTyping(true)
 
     try {
-      // Map messages to OpenRouter / backend format
+      // 1️⃣ Save user message to Firestore
+      await fetch("/api/saveMessage", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: "user123", // later replace with Firebase Auth uid
+          content: userMessage.content,
+          isBot: false,
+        }),
+      })
+
+      // 2️⃣ Prepare chat messages for AI API
       const chatMessages = [
         ...messages.map((m) => ({
           role: m.isBot ? "assistant" : "user",
@@ -82,6 +94,17 @@ export default function AIChatInterface() {
       }
 
       setMessages((prev) => [...prev, botMessage])
+
+      // 3️⃣ Save bot message to Firestore
+      await fetch("/api/saveMessage", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: "bot",
+          content: botMessage.content,
+          isBot: true,
+        }),
+      })
     } catch (error) {
       console.error("Error fetching bot response:", error)
       const errorMessage: Message = {
