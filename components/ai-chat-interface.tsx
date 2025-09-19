@@ -6,6 +6,10 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Send, Bot, User, Mic } from "lucide-react"
 import { useSpeechToText } from "@/hooks/useSpeechToText"
+import AuthForm from "@/components/AuthForm"
+import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth"
+import { db, auth } from "@/lib/firebase"
+import { collection, query, where, orderBy, onSnapshot } from "firebase/firestore"
 
 interface Message {
   id: string
@@ -25,24 +29,52 @@ export default function AIChatInterface() {
   ])
   const [inputValue, setInputValue] = useState("")
   const [isTyping, setIsTyping] = useState(false)
+  const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
+  // Scroll down
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }
-
   useEffect(() => {
     scrollToBottom()
   }, [messages])
 
+  // Track Auth user
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, (user) => {
+      setCurrentUser(user)
+    })
+    return () => unsub()
+  }, [])
+
   // --- Speech to text hook ---
   const { transcript, isListening, startListening, stopListening } = useSpeechToText()
-
   useEffect(() => {
     if (transcript) setInputValue(transcript)
   }, [transcript])
 
-  // 🔥 Updated handleSendMessage with Firestore save
+  // Load messages if logged in
+  useEffect(() => {
+    if (currentUser) {
+      const q = query(
+        collection(db, "messages"),
+        where("userId", "==", currentUser.uid),
+        orderBy("createdAt", "asc")
+      )
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+        const loaded = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...(doc.data() as any),
+          timestamp: new Date((doc.data() as any).createdAt?.toDate?.() || Date.now()),
+        }))
+        setMessages(loaded as Message[])
+      })
+      return () => unsubscribe()
+    }
+  }, [currentUser])
+
+  // 🔥 Handle Send Message
   const handleSendMessage = async () => {
     if (!inputValue.trim()) return
 
@@ -63,13 +95,13 @@ export default function AIChatInterface() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          userId: "user123", // later replace with Firebase Auth uid
+          userId: currentUser ? currentUser.uid : "guest",
           content: userMessage.content,
           isBot: false,
         }),
       })
 
-      // 2️⃣ Prepare chat messages for AI API
+      // 2️⃣ Prepare messages for AI
       const chatMessages = [
         ...messages.map((m) => ({
           role: m.isBot ? "assistant" : "user",
@@ -100,7 +132,7 @@ export default function AIChatInterface() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          userId: "bot",
+          userId: currentUser ? currentUser.uid : "bot",
           content: botMessage.content,
           isBot: true,
         }),
@@ -125,6 +157,13 @@ export default function AIChatInterface() {
 
   return (
     <section id="chat" className="py-16">
+      {/* Show login form if no user */}
+      {!currentUser && (
+        <div className="max-w-md mx-auto mb-6">
+          <AuthForm />
+        </div>
+      )}
+
       <Card className="max-w-4xl mx-auto">
         <CardHeader className="text-center bg-gradient-calm">
           <div className="relative inline-block p-4 mb-2">
@@ -164,7 +203,9 @@ export default function AIChatInterface() {
                   </div>
                   <div
                     className={`p-3 rounded-lg ${
-                      message.isBot ? "bg-muted text-foreground" : "bg-primary text-primary-foreground"
+                      message.isBot
+                        ? "bg-muted text-foreground"
+                        : "bg-primary text-primary-foreground"
                     }`}
                   >
                     <p className="text-sm">{message.content}</p>
