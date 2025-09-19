@@ -16,6 +16,8 @@ import AdminLoginModal from "@/components/admin-login-modal"
 import { useAppStore } from "@/lib/store"
 import { Button } from "@/components/ui/button"
 import { Shield, LogOut } from "lucide-react"
+import AuthButton from "../components/authform" 
+import AiChatInterface from "@/components/ai-chat-interface"
 
 export default function Home() {
   const [showAdminLogin, setShowAdminLogin] = useState(false)
@@ -31,7 +33,9 @@ export default function Home() {
       <BackgroundAnimation />
       <Navigation />
 
-      <div className="fixed top-4 right-4 z-50">
+      {/* 🔹 Top-right me AuthButton + Admin button */}
+      <div className="fixed top-4 right-4 z-50 flex space-x-2">
+        <AuthButton />
         {isAdminAuthenticated ? (
           <Button
             onClick={handleAdminLogout}
@@ -58,7 +62,10 @@ export default function Home() {
       <div className="container mx-auto px-4 py-8 space-y-16">
         <HeroSection />
         <FeaturesGrid />
-        <AIChatInterface />
+
+        {/* 🔹 AI chat interface */}
+        <AiChatInterface />
+
         <PsychologicalScreening />
         <BookingSystem />
         <ResourcesHub />
