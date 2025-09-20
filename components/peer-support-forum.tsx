@@ -1,12 +1,24 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { Plus, MessageCircle, Heart } from "lucide-react"
 import { useAppStore } from "@/lib/store"
+import { db, auth } from "@/lib/firebase"
+import {
+  collection,
+  addDoc,
+  onSnapshot,
+  updateDoc,
+  doc,
+  increment,
+  arrayUnion,
+  arrayRemove,
+} from "firebase/firestore"
+import { useRouter } from "next/navigation"
 
 interface ForumPost {
   id: string
@@ -16,79 +28,70 @@ interface ForumPost {
   tags: string[]
   likes: number
   replies: number
+  likedBy: string[] // ✅ users who liked
 }
 
-const initialPosts: ForumPost[] = [
-  {
-    id: "1",
-    author: "Anonymous Student",
-    content:
-      "Feeling overwhelmed with semester exams. Found some peace through the meditation videos here. Anyone else dealing with exam stress?",
-    timestamp: "2 hours ago",
-    tags: ["Exam Stress", "Support"],
-    likes: 12,
-    replies: 5,
-  },
-  {
-    id: "2",
-    author: "Peer Volunteer - Raj",
-    content:
-      "Remember, it's okay to take breaks. Your mental health is as important as your grades. Here if anyone needs to talk! 💙",
-    timestamp: "5 hours ago",
-    tags: ["Encouragement", "Self-Care"],
-    likes: 28,
-    replies: 8,
-  },
-  {
-    id: "3",
-    author: "Anonymous Student",
-    content:
-      "First time reaching out. The loneliness in hostel is getting to me. How do you all cope with homesickness?",
-    timestamp: "1 day ago",
-    tags: ["Homesickness", "First Year"],
-    likes: 15,
-    replies: 12,
-  },
-  {
-    id: "4",
-    author: "Study Buddy - Priya",
-    content:
-      "Started a study group for anyone dealing with academic anxiety. We meet every Tuesday at 4 PM in the library. All welcome!",
-    timestamp: "2 days ago",
-    tags: ["Study Group", "Academic Support"],
-    likes: 22,
-    replies: 7,
-  },
-]
-
 export default function PeerSupportForum() {
-  const [posts, setPosts] = useState<ForumPost[]>(initialPosts)
+  const [posts, setPosts] = useState<ForumPost[]>([])
   const [showCreatePost, setShowCreatePost] = useState(false)
   const [newPostContent, setNewPostContent] = useState("")
-
   const incrementForumPosts = useAppStore((state) => state.incrementForumPosts)
+  const router = useRouter()
 
-  const handleCreatePost = () => {
+  // ✅ Realtime listener
+  useEffect(() => {
+    const unsub = onSnapshot(collection(db, "forumPosts"), (snapshot) => {
+      const loaded: ForumPost[] = snapshot.docs.map((docSnap) => ({
+        id: docSnap.id,
+        ...docSnap.data(),
+      })) as ForumPost[]
+      setPosts(loaded)
+    })
+    return () => unsub()
+  }, [])
+
+  // ✅ Create new post
+  const handleCreatePost = async () => {
     if (!newPostContent.trim()) return
 
-    const newPost: ForumPost = {
-      id: Date.now().toString(),
+    await addDoc(collection(db, "forumPosts"), {
       author: "You (Anonymous)",
       content: newPostContent,
-      timestamp: "Just now",
+      timestamp: new Date().toLocaleString(),
       tags: ["New"],
       likes: 0,
       replies: 0,
-    }
+      likedBy: [],
+    })
 
-    setPosts([newPost, ...posts])
     setNewPostContent("")
     setShowCreatePost(false)
     incrementForumPosts()
   }
 
-  const handleLikePost = (postId: string) => {
-    setPosts(posts.map((post) => (post.id === postId ? { ...post, likes: post.likes + 1 } : post)))
+  // ✅ Like / Unlike
+  const handleToggleLike = async (post: ForumPost) => {
+    const userId = auth.currentUser?.uid
+    if (!userId) {
+      router.push("/login") // ⬅️ redirect to login if not logged in
+      return
+    }
+
+    const postRef = doc(db, "forumPosts", post.id)
+
+    if (post.likedBy.includes(userId)) {
+      // 👎 Unlike
+      await updateDoc(postRef, {
+        likes: increment(-1),
+        likedBy: arrayRemove(userId),
+      })
+    } else {
+      // 👍 Like
+      await updateDoc(postRef, {
+        likes: increment(1),
+        likedBy: arrayUnion(userId),
+      })
+    }
   }
 
   return (
@@ -102,10 +105,13 @@ export default function PeerSupportForum() {
             <h2 className="text-3xl font-bold text-black">Peer Support Community</h2>
           </div>
         </div>
-        <p className="text-muted-foreground text-lg">Connect with fellow students in a safe, moderated environment</p>
+        <p className="text-muted-foreground text-lg">
+          Connect with fellow students in a safe, moderated environment
+        </p>
       </div>
 
       <div className="max-w-4xl mx-auto">
+        {/* ✅ Create Post */}
         <div className="mb-8">
           {!showCreatePost ? (
             <Button onClick={() => setShowCreatePost(true)} className="w-full md:w-auto">
@@ -137,43 +143,49 @@ export default function PeerSupportForum() {
           )}
         </div>
 
+        {/* ✅ Posts List */}
         <div className="space-y-6">
-          {posts.map((post) => (
-            <Card key={post.id} className="hover:shadow-md transition-shadow">
-              <CardContent className="p-6">
-                <div className="flex justify-between items-start mb-4">
-                  <div>
-                    <span className="font-medium text-primary">{post.author}</span>
-                    <span className="text-muted-foreground text-sm ml-2">{post.timestamp}</span>
+          {posts.map((post) => {
+            const userId = auth.currentUser?.uid
+            const isLiked = userId ? post.likedBy.includes(userId) : false
+
+            return (
+              <Card key={post.id} className="hover:shadow-md transition-shadow">
+                <CardContent className="p-6">
+                  <div className="flex justify-between items-start mb-4">
+                    <div>
+                      <span className="font-medium text-primary">{post.author}</span>
+                      <span className="text-muted-foreground text-sm ml-2">{post.timestamp}</span>
+                    </div>
                   </div>
-                </div>
 
-                <p className="text-foreground mb-4 text-pretty">{post.content}</p>
+                  <p className="text-foreground mb-4 text-pretty">{post.content}</p>
 
-                <div className="flex flex-wrap gap-2 mb-4">
-                  {post.tags.map((tag, index) => (
-                    <Badge key={index} variant="secondary" className="text-xs">
-                      {tag}
-                    </Badge>
-                  ))}
-                </div>
-
-                <div className="flex items-center space-x-4 text-sm text-muted-foreground">
-                  <button
-                    onClick={() => handleLikePost(post.id)}
-                    className="flex items-center space-x-1 hover:text-primary transition-colors"
-                  >
-                    <Heart className="w-4 h-4" />
-                    <span>{post.likes}</span>
-                  </button>
-                  <div className="flex items-center space-x-1">
-                    <MessageCircle className="w-4 h-4" />
-                    <span>{post.replies} replies</span>
+                  <div className="flex flex-wrap gap-2 mb-4">
+                    {post.tags.map((tag, index) => (
+                      <Badge key={index} variant="secondary" className="text-xs">
+                        {tag}
+                      </Badge>
+                    ))}
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+
+                  <div className="flex items-center space-x-4 text-sm text-muted-foreground">
+                    <button
+                      onClick={() => handleToggleLike(post)}
+                      className="flex items-center space-x-1 hover:text-primary transition-colors"
+                    >
+                      <Heart className={`w-4 h-4 ${isLiked ? "fill-black text-black" : ""}`} />
+                      <span>{post.likes}</span>
+                    </button>
+                    <div className="flex items-center space-x-1">
+                      <MessageCircle className="w-4 h-4" />
+                      <span>{post.replies} replies</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )
+          })}
         </div>
       </div>
     </section>
