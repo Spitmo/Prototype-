@@ -9,7 +9,7 @@ import { useSpeechToText } from "@/hooks/useSpeechToText"
 import AuthForm from "../components/authform"
 import { onAuthStateChanged, signOut, User as FirebaseUser } from "firebase/auth"
 import { db, auth } from "@/lib/firebase"
-import { collection, query, where, orderBy, onSnapshot } from "firebase/firestore"
+import { collection, query, where, orderBy, onSnapshot, addDoc, serverTimestamp } from "firebase/firestore"
 
 interface Message {
   id: string
@@ -18,7 +18,7 @@ interface Message {
   timestamp: Date
 }
 
-export default function AIChatInterface() {
+export default function AiChatInterface() {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "1",
@@ -45,7 +45,7 @@ export default function AIChatInterface() {
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (user) => {
       setCurrentUser(user)
-      if (user) setShowAuth(false) // ✅ close modal on login
+      if (user) setShowAuth(false) // close modal on login
     })
     return () => unsub()
   }, [])
@@ -56,7 +56,7 @@ export default function AIChatInterface() {
     if (transcript) setInputValue(transcript)
   }, [transcript])
 
-  // Load messages if logged in
+  // Load messages: guest or logged-in user
   useEffect(() => {
     if (currentUser) {
       const q = query(
@@ -73,6 +73,9 @@ export default function AIChatInterface() {
         setMessages(loaded as Message[])
       })
       return () => unsubscribe()
+    } else {
+      const guestChats = localStorage.getItem("guestChat")
+      if (guestChats) setMessages(JSON.parse(guestChats))
     }
   }, [currentUser])
 
@@ -83,14 +86,11 @@ export default function AIChatInterface() {
       if (guestChats) {
         const chats = JSON.parse(guestChats)
         chats.forEach(async (msg: any) => {
-          await fetch("/api/saveMessage", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              userId: currentUser.uid,
-              content: msg.content,
-              isBot: msg.isBot,
-            }),
+          await addDoc(collection(db, "messages"), {
+            userId: currentUser.uid,
+            content: msg.content,
+            isBot: msg.isBot,
+            createdAt: serverTimestamp(),
           })
         })
         localStorage.removeItem("guestChat")
@@ -98,7 +98,7 @@ export default function AIChatInterface() {
     }
   }, [currentUser])
 
-  // 🔥 Handle Send Message
+  // Handle Send Message
   const handleSendMessage = async () => {
     if (!inputValue.trim()) return
 
@@ -114,23 +114,23 @@ export default function AIChatInterface() {
     setIsTyping(true)
 
     try {
-      // Save user message
-      await fetch("/api/saveMessage", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId: currentUser ? currentUser.uid : "guest",
+      // Save message
+      if (currentUser) {
+        await addDoc(collection(db, "messages"), {
+          userId: currentUser.uid,
           content: userMessage.content,
           isBot: false,
-        }),
-      })
+          createdAt: serverTimestamp(),
+        })
+      } else {
+        const existing = localStorage.getItem("guestChat")
+        const arr = existing ? JSON.parse(existing) : []
+        localStorage.setItem("guestChat", JSON.stringify([...arr, userMessage]))
+      }
 
       // AI call
       const chatMessages = [
-        ...messages.map((m) => ({
-          role: m.isBot ? "assistant" : "user",
-          content: m.content,
-        })),
+        ...messages.map((m) => ({ role: m.isBot ? "assistant" : "user", content: m.content })),
         { role: "user", content: inputValue },
       ]
 
@@ -151,16 +151,14 @@ export default function AIChatInterface() {
 
       setMessages((prev) => [...prev, botMessage])
 
-      // Save bot message
-      await fetch("/api/saveMessage", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId: currentUser ? currentUser.uid : "bot",
+      if (currentUser) {
+        await addDoc(collection(db, "messages"), {
+          userId: currentUser.uid,
           content: botMessage.content,
           isBot: true,
-        }),
-      })
+          createdAt: serverTimestamp(),
+        })
+      }
     } catch (error) {
       console.error("Error fetching bot response:", error)
       const errorMessage: Message = {
@@ -191,7 +189,7 @@ export default function AIChatInterface() {
             >
               <X size={20} />
             </button>
-            <AuthForm />
+            <AuthForm onSuccess={() => setShowAuth(false)} />
           </div>
         </div>
       )}
@@ -251,37 +249,22 @@ export default function AIChatInterface() {
                 </div>
               </div>
             ))}
-            {isTyping && (
-              <div className="flex justify-start">
-                <div className="flex items-start space-x-2 max-w-xs lg:max-w-md">
-                  <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
-                    <Bot className="w-4 h-4 text-primary-foreground" />
-                  </div>
-                  <div className="p-3 rounded-lg bg-muted">
-                    <p className="text-sm text-gray-500">Bot is typing...</p>
-                  </div>
-                </div>
-              </div>
-            )}
             <div ref={messagesEndRef} />
           </div>
 
-          <div className="p-4 border-t border-border">
-            <div className="flex space-x-2">
-              <Input
-                value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
-                onKeyPress={handleKeyPress}
-                placeholder="Type or speak your message..."
-                className="flex-1"
-              />
-              <Button onClick={handleSendMessage} disabled={!inputValue.trim() || isTyping}>
-                <Send className="w-4 h-4" />
-              </Button>
-              <Button onClick={isListening ? stopListening : startListening}>
-                <Mic className="w-4 h-4" /> {isListening ? "Stop" : "Speak"}
-              </Button>
-            </div>
+          <div className="flex p-4 space-x-2">
+            <Input
+              placeholder="Type your message..."
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              onKeyDown={handleKeyPress}
+            />
+            <Button onClick={handleSendMessage} disabled={isTyping}>
+              <Send />
+            </Button>
+            <Button onClick={isListening ? stopListening : startListening}>
+              <Mic />
+            </Button>
           </div>
         </CardContent>
       </Card>
