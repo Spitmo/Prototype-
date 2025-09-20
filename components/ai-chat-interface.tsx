@@ -28,6 +28,7 @@ export default function AIChatInterface() {
   const [inputValue, setInputValue] = useState("")
   const [isTyping, setIsTyping] = useState(false)
   const [currentUser, setCurrentUser] = useState<User | null>(null)
+  const [showAuth, setShowAuth] = useState(false) // 👈 state for modal
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   // Scroll to bottom
@@ -55,45 +56,12 @@ export default function AIChatInterface() {
     }
   }, [currentUser])
 
+  // ✅ Trigger AuthBanner on 5th message for guest
   useEffect(() => {
-    if (currentUser) {
-      // Fetch chat history from BigQuery via your API
-      fetch(`/api/chat/history?userId=${currentUser.uid}`)
-        .then((res) => res.json())
-        .then((data) => {
-          // Convert timestamp to Date if needed
-          const loaded = data.map((msg: any) => ({
-            ...msg,
-            timestamp: new Date(msg.timestamp),
-            isBot: msg.isBot ?? false, // fallback if not present
-            id: msg.id?.toString() ?? Date.now().toString(),
-          }))
-          setMessages(
-            loaded.length > 0
-              ? loaded
-              : [
-                  {
-                    id: "1",
-                    content: "Hi! I'm your friendly AI buddy 😊 What's on your mind today?",
-                    isBot: true,
-                    timestamp: new Date(),
-                  },
-                ]
-          )
-        })
-        .catch(() => {
-          // fallback to default message if error
-          setMessages([
-            {
-              id: "1",
-              content: "Hi! I'm your friendly AI buddy 😊 What's on your mind today?",
-              isBot: true,
-              timestamp: new Date(),
-            },
-          ])
-        })
+    if (messages.length === 5 && !currentUser) {
+      setShowAuth(true)
     }
-  }, [currentUser])
+  }, [messages, currentUser])
 
   const handleSendMessage = async () => {
     if (!inputValue.trim()) return
@@ -176,7 +144,8 @@ export default function AIChatInterface() {
           <CardTitle className="text-2xl">AI Mental Health Assistant</CardTitle>
         </CardHeader>
         <CardContent>
-          <AuthBanner />
+          {/* 🔥 Login modal */}
+          <AuthBanner show={showAuth} onClose={() => setShowAuth(false)} />
 
           <div className="h-80 overflow-y-auto p-4 space-y-3">
             {messages.map((m) => (

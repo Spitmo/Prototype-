@@ -1,5 +1,6 @@
 import { initializeApp, getApps } from "firebase/app"
 import { getFirestore } from "firebase/firestore"
+import { getAuth } from "firebase/auth"
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -10,5 +11,11 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 }
 
+// ✅ ensure only one app instance
 export const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig)
+
+// Firestore
 export const db = getFirestore(app)
+
+// Auth
+export const auth = getAuth(app)

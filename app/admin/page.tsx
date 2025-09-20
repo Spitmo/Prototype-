@@ -2,9 +2,7 @@
 
 import { useState } from "react"
 import Navigation from "@/components/navigation"
-import HeroSection from "@/components/hero-section"
-import AIChatInterface from "@/components/ai-chat-interface"
-import PeerSupportForum from "@/components/peer-support-forum"
+import AdminDashboard from "@/components/admin-dashboard"
 import EmergencyModal from "@/components/emergency-modal"
 import BackgroundAnimation from "@/components/background-animation"
 import AdminLoginModal from "@/components/admin-login-modal"
@@ -12,7 +10,7 @@ import { useAppStore } from "@/lib/store"
 import { Button } from "@/components/ui/button"
 import { Shield, LogOut } from "lucide-react"
 
-export default function Home() {
+export default function AdminPage() {
   const [showAdminLogin, setShowAdminLogin] = useState(false)
   const isAdminAuthenticated = useAppStore((state) => state.isAdminAuthenticated)
   const logoutAdmin = useAppStore((state) => state.logoutAdmin)
@@ -50,14 +48,21 @@ export default function Home() {
         )}
       </div>
 
-      <div className="container mx-auto px-4 py-8 space-y-16">
-        <HeroSection />
-        <section id="chat">
-          <AIChatInterface />
-        </section>
-        <section id="forum">
-          <PeerSupportForum />
-        </section>
+      <div className="container mx-auto px-4 py-8">
+        {isAdminAuthenticated ? (
+          <AdminDashboard />
+        ) : (
+          <div className="flex items-center justify-center min-h-[60vh]">
+            <div className="text-center">
+              <h1 className="text-2xl font-bold mb-4">Admin Access Required</h1>
+              <p className="text-muted-foreground mb-6">Please log in to access the admin dashboard.</p>
+              <Button onClick={() => setShowAdminLogin(true)}>
+                <Shield className="h-4 w-4 mr-2" />
+                Admin Login
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
 
       <EmergencyModal />
