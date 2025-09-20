@@ -12,6 +12,7 @@ import { useAppStore } from "@/lib/store"
 import { Button } from "@/components/ui/button"
 import { Shield, LogOut } from "lucide-react"
 
+
 export default function Home() {
   const [showAdminLogin, setShowAdminLogin] = useState(false)
   const isAdminAuthenticated = useAppStore((state) => state.isAdminAuthenticated)
