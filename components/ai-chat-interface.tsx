@@ -4,10 +4,10 @@ import { useState, useRef, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Send, Bot, User, Mic } from "lucide-react"
+import { Send, Bot, User, Mic, X } from "lucide-react"
 import { useSpeechToText } from "@/hooks/useSpeechToText"
 import AuthForm from "../components/authform"
-import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth"
+import { onAuthStateChanged, signOut, User as FirebaseUser } from "firebase/auth"
 import { db, auth } from "@/lib/firebase"
 import { collection, query, where, orderBy, onSnapshot } from "firebase/firestore"
 
@@ -30,6 +30,7 @@ export default function AIChatInterface() {
   const [inputValue, setInputValue] = useState("")
   const [isTyping, setIsTyping] = useState(false)
   const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(null)
+  const [showAuth, setShowAuth] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   // Scroll down
@@ -44,6 +45,7 @@ export default function AIChatInterface() {
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (user) => {
       setCurrentUser(user)
+      if (user) setShowAuth(false) // ✅ close modal on login
     })
     return () => unsub()
   }, [])
@@ -74,6 +76,28 @@ export default function AIChatInterface() {
     }
   }, [currentUser])
 
+  // Guest → User migration
+  useEffect(() => {
+    if (currentUser) {
+      const guestChats = localStorage.getItem("guestChat")
+      if (guestChats) {
+        const chats = JSON.parse(guestChats)
+        chats.forEach(async (msg: any) => {
+          await fetch("/api/saveMessage", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              userId: currentUser.uid,
+              content: msg.content,
+              isBot: msg.isBot,
+            }),
+          })
+        })
+        localStorage.removeItem("guestChat")
+      }
+    }
+  }, [currentUser])
+
   // 🔥 Handle Send Message
   const handleSendMessage = async () => {
     if (!inputValue.trim()) return
@@ -90,7 +114,7 @@ export default function AIChatInterface() {
     setIsTyping(true)
 
     try {
-      // 1️⃣ Save user message to Firestore
+      // Save user message
       await fetch("/api/saveMessage", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -101,7 +125,7 @@ export default function AIChatInterface() {
         }),
       })
 
-      // 2️⃣ Prepare messages for AI
+      // AI call
       const chatMessages = [
         ...messages.map((m) => ({
           role: m.isBot ? "assistant" : "user",
@@ -127,7 +151,7 @@ export default function AIChatInterface() {
 
       setMessages((prev) => [...prev, botMessage])
 
-      // 3️⃣ Save bot message to Firestore
+      // Save bot message
       await fetch("/api/saveMessage", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -156,24 +180,38 @@ export default function AIChatInterface() {
   }
 
   return (
-    <section id="chat" className="py-16">
-      {/* Show login form if no user */}
-      {!currentUser && (
-        <div className="max-w-md mx-auto mb-6">
-          <AuthForm />
+    <section id="chat" className="py-16 relative">
+      {/* Auth Modal */}
+      {showAuth && !currentUser && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-lg relative w-full max-w-md">
+            <button
+              onClick={() => setShowAuth(false)}
+              className="absolute top-2 right-2 text-gray-500 hover:text-black"
+            >
+              <X size={20} />
+            </button>
+            <AuthForm />
+          </div>
         </div>
       )}
 
+      {/* Logout + Login Buttons */}
+      <div className="flex justify-end max-w-4xl mx-auto mb-2">
+        {currentUser ? (
+          <Button variant="outline" onClick={() => signOut(auth)}>
+            Logout
+          </Button>
+        ) : (
+          <Button variant="outline" onClick={() => setShowAuth(true)}>
+            Login / Sign Up
+          </Button>
+        )}
+      </div>
+
       <Card className="max-w-4xl mx-auto">
         <CardHeader className="text-center bg-gradient-calm">
-          <div className="relative inline-block p-4 mb-2">
-            <div className="absolute inset-0 bg-gradient-to-r from-orange-500 via-white to-green-600 p-0.5 rounded-lg">
-              <div className="bg-white rounded-lg h-full w-full"></div>
-            </div>
-            <div className="relative">
-              <CardTitle className="text-2xl text-black">AI Mental Health Assistant</CardTitle>
-            </div>
-          </div>
+          <CardTitle className="text-2xl text-black">AI Mental Health Assistant</CardTitle>
           <p className="text-muted-foreground">
             I'm here to listen and help. Everything you share is confidential.
           </p>
@@ -220,23 +258,14 @@ export default function AIChatInterface() {
                     <Bot className="w-4 h-4 text-primary-foreground" />
                   </div>
                   <div className="p-3 rounded-lg bg-muted">
-                    <div className="flex space-x-1">
-                      <div className="w-2 h-2 bg-primary rounded-full animate-bounce"></div>
-                      <div
-                        className="w-2 h-2 bg-primary rounded-full animate-bounce"
-                        style={{ animationDelay: "0.1s" }}
-                      ></div>
-                      <div
-                        className="w-2 h-2 bg-primary rounded-full animate-bounce"
-                        style={{ animationDelay: "0.2s" }}
-                      ></div>
-                    </div>
+                    <p className="text-sm text-gray-500">Bot is typing...</p>
                   </div>
                 </div>
               </div>
             )}
             <div ref={messagesEndRef} />
           </div>
+
           <div className="p-4 border-t border-border">
             <div className="flex space-x-2">
               <Input
