@@ -19,11 +19,11 @@ export default function Navigation() {
 
   const navItems = [
     { href: "/", label: "Home", scroll: false }, // 👈 Home: no auto scroll
-    { href: "#chat", label: "AI Support" },      // 👈 will scroll inside page
+    { href: "/chat", label: "AI Support" },      // 👈 will scroll inside page
     { href: "/assessment", label: "Assessment" },
     { href: "/booking", label: "Book Session" },
     { href: "/resources", label: "Resources" },
-    { href: "#forum", label: "Peer Support" },   // 👈 will scroll inside page
+    { href: "/forum", label: "Peer Support" },   // 👈 will scroll inside page
     { href: "/admin", label: "Dashboard" },
   ]
 
