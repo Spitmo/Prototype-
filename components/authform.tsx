@@ -30,10 +30,9 @@ export default function AuthForm({ onSuccess }: { onSuccess?: () => void }) {
         await signInWithEmailAndPassword(auth, email, password)
         onSuccess?.()
       } else {
-        // ❌ Signup → modal stay open
+        // ✅ Signup → ALSO close modal and trigger onSuccess
         await createUserWithEmailAndPassword(auth, email, password)
-        setIsLogin(true) // switch to login
-        setError("Sign up successful! Please login now.")
+        onSuccess?.()
       }
     } catch (err: any) {
       setError("❌ " + err.message)
