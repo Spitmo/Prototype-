@@ -65,7 +65,11 @@ export async function POST(req: NextRequest) {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
+<<<<<<< HEAD
         model: "gpt-oss-20b",
+=======
+        model: "openai/gpt-oss-20b",
+>>>>>>> 42cc12658725d446eba758964591002ef19b50e0
         messages: chatMessages,
         temperature: 0.7,
         max_tokens: 800
