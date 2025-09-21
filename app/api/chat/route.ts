@@ -4,21 +4,27 @@ import { NextRequest } from "next/server";
 // --- Mood analysis helper ---
 function analyzeMood(userText: string) {
   const emotionalKeywords = [
-    "depress","depression","anxious","anxiety","stress","tension",
-    "dukhi","udasi","lonely","panic","fikr","parishan"
+    "depress", "depression", "anxious", "anxiety", "stress", "tension",
+    "dukhi", "udasi", "lonely", "panic", "fikr", "parishan"
   ];
-  const matches = emotionalKeywords.filter(kw => userText.toLowerCase().includes(kw));
+
+  const matches = emotionalKeywords.filter((kw) =>
+    userText.toLowerCase().includes(kw)
+  );
 
   if (matches.length === 0) return { isConcern: false };
-  
-  if (userText.length < 40) return { isConcern: false, isMild: true };
-  
+
+  if (userText.length < 40)
+    return { isConcern: false, isMild: true };
+
   return { isConcern: true };
 }
 
+// --- POST handler ---
 export async function POST(req: NextRequest) {
   try {
     const { messages } = await req.json(); // [{ role, content }]
+
     if (!Array.isArray(messages) || messages.length === 0) {
       return new Response(
         JSON.stringify({ text: "Kya bolta bhidu? 😄" }),
@@ -27,24 +33,25 @@ export async function POST(req: NextRequest) {
     }
 
     // --- Last user message ---
-    const lastUser = [...messages].reverse().find(m => m.role === "user");
+    const lastUser = [...messages].reverse().find((m) => m.role === "user");
     const userText = lastUser?.content || "";
 
     // --- Analyze mood ---
     const mood = analyzeMood(userText);
 
-    // --- System prompt ---
+    // --- Base system prompt ---
     let systemPrompt = `You are a friendly, casual chatbot buddy.
-- Reply in the same language as user (Hindi/English mix allowed)
-- Keep tone natural, human-like, supportive
-- Use emojis sometimes
-- Short replies for greetings, longer for deep talks`;
+- Reply in the same language as user (Hindi/English mix allowed).
+- Keep tone natural, human-like, supportive.
+- Use emojis sometimes.
+- Short replies for greetings, longer for deep talks.`;
 
+    // --- Add mood-specific instructions ---
     if (mood.isConcern) {
       systemPrompt += `
 - The user seems seriously stressed, anxious, or depressed.
 - Start with empathetic talk.
-- After conversation, you may suggest PHQ-9 or GAD-7 test if needed.`;
+- After some supportive conversation, suggest PHQ-9 or GAD-7 test if needed.`;
     } else if (mood.isMild) {
       systemPrompt += `
 - User seems slightly stressed or sad.
@@ -54,26 +61,22 @@ export async function POST(req: NextRequest) {
     // --- Prepare messages for model ---
     const chatMessages = [
       { role: "system", content: systemPrompt },
-      ...messages.map(m => ({ role: m.role, content: m.content }))
+      ...messages.map((m) => ({ role: m.role, content: m.content })),
     ];
 
-    // --- OpenRouter call ---
+    // --- OpenRouter API call ---
     const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`,
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
       },
       body: JSON.stringify({
-<<<<<<< HEAD
-        model: "gpt-oss-20b",
-=======
-        model: "openai/gpt-oss-20b",
->>>>>>> 42cc12658725d446eba758964591002ef19b50e0
+        model: "gpt-4o-mini", // ✅ recommended small + fast model
         messages: chatMessages,
         temperature: 0.7,
-        max_tokens: 800
-      })
+        max_tokens: 500,
+      }),
     });
 
     if (!response.ok) {
@@ -91,10 +94,10 @@ export async function POST(req: NextRequest) {
       data.choices?.[0]?.text ||
       "Arre bhidu, reply nahi ban paya 😅";
 
-    return new Response(JSON.stringify({ text }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" }
-    });
+    return new Response(
+      JSON.stringify({ text }),
+      { status: 200, headers: { "Content-Type": "application/json" } }
+    );
 
   } catch (err) {
     console.error("Internal server error:", err);
