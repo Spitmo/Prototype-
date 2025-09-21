@@ -11,7 +11,6 @@ import PeerSupportForum from "@/components/peer-support-forum"
 import AdminDashboard from "@/components/admin-dashboard"
 import EmergencyModal from "@/components/emergency-modal"
 import BackgroundAnimation from "@/components/background-animation"
-import PsychologicalScreening from "@/components/psychological-screening"
 import AdminLoginModal from "@/components/admin-login-modal"
 import { useAppStore } from "@/lib/store"
 import { Button } from "@/components/ui/button"
@@ -113,7 +112,7 @@ export default function Home() {
         <HeroSection />
         <FeaturesGrid />
         <AiChatInterface /> {/* AiChatInterface now handles user inside */}
-        <PsychologicalScreening />
+        {/* PsychologicalScreening moved to separate page */}
         <BookingSystem />
         <ResourcesHub />
         <PeerSupportForum />
@@ -125,3 +124,4 @@ export default function Home() {
     </main>
   )
 }
+

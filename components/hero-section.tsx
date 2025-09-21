@@ -21,14 +21,14 @@ export default function HeroSection() {
           </div>
           <div className="relative">
             <h1 className="text-4xl md:text-6xl font-bold text-balance bg-gradient-to-b from-gray-800 via-black to-gray-600 bg-clip-text text-transparent">
-              MindCare - Every thought matters here
+              MindCare - Every Thought Matters Here
             </h1>
             {/* <div className="w-full h-1 bg-gradient-to-r from-blue-600 via-blue-500 to-blue-600 mt-4 rounded-full"></div> */}
           </div>
         </div>
 
         <p className="text-xl md:text-2xl text-muted-foreground mb-8 text-pretty">
-          Confidential, Culturally-Sensitive, and Always Available Support for College Students
+         Confidential, Caring, and Available Whenever You Need
         </p>
 
         <div className="flex flex-col sm:flex-row gap-4 justify-center">

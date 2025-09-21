@@ -29,12 +29,7 @@ const features = [
     description: "Moderated forums with trained student volunteers for community support.",
     onClick: () => document.getElementById("forum")?.scrollIntoView({ behavior: "smooth" }),
   },
-  {
-    icon: BarChart3,
-    title: "Analytics Dashboard",
-    description: "Real-time insights for administrators to track wellness trends and plan interventions.",
-    onClick: () => document.getElementById("dashboard")?.scrollIntoView({ behavior: "smooth" }),
-  },
+  
 ]
 
 export default function FeaturesGrid() {

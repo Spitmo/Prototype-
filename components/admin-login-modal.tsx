@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useState } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
@@ -35,6 +34,13 @@ export default function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProp
     const isAuthenticated = authenticateAdmin(email, password)
 
     if (isAuthenticated) {
+      // ✅ Update global admin mode (navigation.tsx exposes this)
+      if (typeof window !== "undefined" && (window as any).setAdminMode) {
+        (window as any).setAdminMode()
+      }
+      localStorage.setItem("isAdmin", "true")
+
+      // Close modal & reset
       onClose()
       setEmail("")
       setPassword("")
@@ -61,7 +67,7 @@ export default function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProp
             <Input
               id="email"
               type="email"
-              placeholder="admin@mindcare.edu"
+              
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
@@ -97,7 +103,11 @@ export default function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProp
             </div>
           </div>
 
-          {error && <div className="text-sm text-red-600 bg-red-50 p-3 rounded-md border border-red-200">{error}</div>}
+          {error && (
+            <div className="text-sm text-red-600 bg-red-50 p-3 rounded-md border border-red-200">
+              {error}
+            </div>
+          )}
 
           <div className="flex gap-3 pt-4">
             <Button
@@ -119,11 +129,8 @@ export default function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProp
           </div>
         </form>
 
-        <div className="text-xs text-gray-500 mt-4 p-3 bg-gray-50 rounded-md">
-          <p className="font-medium mb-1">Demo Credentials:</p>
-          <p>Email: admin@mindcare.edu</p>
-          <p>Password: MindCare2024!</p>
-        </div>
+        {/* Demo / example credentials block — updated per your request */}
+        
       </DialogContent>
     </Dialog>
   )

@@ -23,6 +23,8 @@ export default function Navigation() {
     <nav className="sticky top-0 z-50 bg-background/95 backdrop-blur-sm border-b border-border">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
+          
+          {/* Logo */}
           <div className="flex items-center space-x-2">
             <div className="text-2xl">🧠</div>
             <span className="text-xl font-bold text-primary">MindCare Campus</span>
@@ -42,8 +44,9 @@ export default function Navigation() {
             >
               AI Support
             </button>
+            {/* 🔹 Go to new Screening Page */}
             <button
-              onClick={() => scrollToSection("screening")}
+              onClick={() => (window.location.href = "/screening")}
               className="text-foreground hover:text-primary transition-colors"
             >
               Assessment
@@ -66,14 +69,9 @@ export default function Navigation() {
             >
               Peer Support
             </button>
-            <button
-              onClick={() => scrollToSection("dashboard")}
-              className="text-foreground hover:text-primary transition-colors"
-            >
-              Dashboard
-            </button>
           </div>
 
+          {/* Crisis Help + Mobile Menu Button */}
           <div className="flex items-center space-x-4">
             <Button
               onClick={showEmergencyModal}
@@ -108,8 +106,9 @@ export default function Navigation() {
               >
                 AI Support
               </button>
+              {/* 🔹 Go to new Screening Page */}
               <button
-                onClick={() => scrollToSection("screening")}
+                onClick={() => (window.location.href = "/screening")}
                 className="text-left py-2 text-foreground hover:text-primary transition-colors"
               >
                 Assessment
@@ -132,12 +131,7 @@ export default function Navigation() {
               >
                 Peer Support
               </button>
-              <button
-                onClick={() => scrollToSection("dashboard")}
-                className="text-left py-2 text-foreground hover:text-primary transition-colors"
-              >
-                Dashboard
-              </button>
+
               <Button onClick={showEmergencyModal} variant="destructive" size="sm" className="mt-2 w-full">
                 <AlertTriangle className="w-4 h-4 mr-2" />
                 Crisis Help
@@ -149,3 +143,8 @@ export default function Navigation() {
     </nav>
   )
 }
+
+
+
+
+
