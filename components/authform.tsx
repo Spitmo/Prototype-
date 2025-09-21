@@ -1,18 +1,66 @@
 "use client"
 
 import { useState } from "react"
-import { auth } from "@/lib/firebase"
+import { auth, db } from "@/lib/firebase"
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
 } from "firebase/auth"
+import { 
+  query, 
+  where, 
+  getDocs, 
+  writeBatch, 
+  collection,
+  doc
+} from "firebase/firestore"
 
-export default function AuthForm({ onSuccess }: { onSuccess?: () => void }) {
+interface AuthFormProps {
+  onSuccess?: () => void;
+  currentGuestId?: string | null;
+}
+
+export default function AuthForm({ onSuccess, currentGuestId }: AuthFormProps) {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [isLogin, setIsLogin] = useState(true)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
+
+  // Function to transfer guest messages to authenticated user
+  const transferGuestMessages = async (userId: string) => {
+    if (!currentGuestId) return;
+    
+    try {
+      const messagesRef = collection(db, "messages");
+      const q = query(messagesRef, where("userId", "==", currentGuestId));
+      const querySnapshot = await getDocs(q);
+      
+      if (querySnapshot.empty) return;
+
+      const batch = writeBatch(db);
+      
+      querySnapshot.forEach((document) => {
+        // Create new document with auto-generated ID
+        const newMessageRef = doc(collection(db, "messages"));
+        batch.set(newMessageRef, {
+          ...document.data(),
+          userId: userId
+        });
+        
+        // Delete the old guest message
+        batch.delete(document.ref);
+      });
+
+      await batch.commit();
+      console.log("Guest messages transferred successfully");
+      
+      // Clear guest ID from storage
+      localStorage.removeItem("guestUserId");
+    } catch (error) {
+      console.error("Error transferring guest messages:", error);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -26,12 +74,20 @@ export default function AuthForm({ onSuccess }: { onSuccess?: () => void }) {
 
     try {
       if (isLogin) {
-        // ✅ Login → close modal
-        await signInWithEmailAndPassword(auth, email, password)
+        // Login
+        const userCredential = await signInWithEmailAndPassword(auth, email, password)
+        // Transfer guest messages if available
+        if (currentGuestId) {
+          await transferGuestMessages(userCredential.user.uid);
+        }
         onSuccess?.()
       } else {
-        // ✅ Signup → ALSO close modal and trigger onSuccess
-        await createUserWithEmailAndPassword(auth, email, password)
+        // Signup
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password)
+        // Transfer guest messages if available
+        if (currentGuestId) {
+          await transferGuestMessages(userCredential.user.uid);
+        }
         onSuccess?.()
       }
     } catch (err: any) {
@@ -50,12 +106,19 @@ export default function AuthForm({ onSuccess }: { onSuccess?: () => void }) {
         {isLogin ? "Login" : "Sign Up"}
       </h2>
 
+      {currentGuestId && (
+        <div className="bg-blue-50 p-3 rounded-md text-sm text-blue-700">
+          <p>Your guest chat history will be saved to your account.</p>
+        </div>
+      )}
+
       <input
         type="email"
         placeholder="Email"
         value={email}
         onChange={(e) => setEmail(e.target.value)}
         className="border p-2 w-full rounded focus:outline-none focus:ring-2 focus:ring-blue-400"
+        required
       />
 
       <input
@@ -64,6 +127,8 @@ export default function AuthForm({ onSuccess }: { onSuccess?: () => void }) {
         value={password}
         onChange={(e) => setPassword(e.target.value)}
         className="border p-2 w-full rounded focus:outline-none focus:ring-2 focus:ring-blue-400"
+        required
+        minLength={6}
       />
 
       {error && <p className="text-red-500 text-sm">{error}</p>}
@@ -78,13 +143,15 @@ export default function AuthForm({ onSuccess }: { onSuccess?: () => void }) {
         {loading ? "Processing..." : isLogin ? "Login" : "Sign Up"}
       </button>
 
-      <p
-        onClick={() => setIsLogin(!isLogin)}
-        className="text-sm text-blue-600 cursor-pointer text-center hover:underline"
-      >
-        {isLogin
-          ? "Need an account? Sign up"
-          : "Already have an account? Login"}
+      <p className="text-sm text-center">
+        <span
+          onClick={() => setIsLogin(!isLogin)}
+          className="text-blue-600 cursor-pointer hover:underline"
+        >
+          {isLogin
+            ? "Need an account? Sign up"
+            : "Already have an account? Login"}
+        </span>
       </p>
     </form>
   )
