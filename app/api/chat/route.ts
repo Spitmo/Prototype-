@@ -1,4 +1,4 @@
-// /app/api/chat/route.ts
+// ---- Pichhla working code ----
 import { NextRequest } from "next/server";
 
 // --- Mood analysis helper ---
@@ -32,21 +32,17 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // --- Last user message ---
     const lastUser = [...messages].reverse().find((m) => m.role === "user");
     const userText = lastUser?.content || "";
 
-    // --- Analyze mood ---
     const mood = analyzeMood(userText);
 
-    // --- Base system prompt ---
     let systemPrompt = `You are a friendly, casual chatbot buddy.
 - Reply in the same language as user (Hindi/English mix allowed).
 - Keep tone natural, human-like, supportive.
 - Use emojis sometimes.
 - Short replies for greetings, longer for deep talks.`;
 
-    // --- Add mood-specific instructions ---
     if (mood.isConcern) {
       systemPrompt += `
 - The user seems seriously stressed, anxious, or depressed.
@@ -58,13 +54,11 @@ export async function POST(req: NextRequest) {
 - Just empathize, do not suggest any test yet.`;
     }
 
-    // --- Prepare messages for model ---
     const chatMessages = [
       { role: "system", content: systemPrompt },
       ...messages.map((m) => ({ role: m.role, content: m.content })),
     ];
 
-    // --- OpenRouter API call ---
     const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -72,7 +66,7 @@ export async function POST(req: NextRequest) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "gpt-4o-mini", // ✅ recommended small + fast model
+        model: "gpt-4o-mini",
         messages: chatMessages,
         temperature: 0.7,
         max_tokens: 500,
@@ -107,3 +101,4 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+

@@ -1,3 +1,4 @@
+// ---- Pichhla working code ----
 "use client"
 
 import { useState, useRef, useEffect } from "react"
@@ -33,7 +34,6 @@ export default function AiChatInterface() {
   const [showAuth, setShowAuth] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
-  // Scroll down
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }
@@ -41,22 +41,19 @@ export default function AiChatInterface() {
     scrollToBottom()
   }, [messages])
 
-  // Track Auth user
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (user) => {
       setCurrentUser(user)
-      if (user) setShowAuth(false) // close modal on login
+      if (user) setShowAuth(false)
     })
     return () => unsub()
   }, [])
 
-  // --- Speech to text hook ---
   const { transcript, isListening, startListening, stopListening } = useSpeechToText()
   useEffect(() => {
     if (transcript) setInputValue(transcript)
   }, [transcript])
 
-  // Load messages for logged-in user OR guest
   useEffect(() => {
     if (currentUser) {
       const q = query(
@@ -78,7 +75,6 @@ export default function AiChatInterface() {
     }
   }, [currentUser])
 
-  // Guest → User migration
   useEffect(() => {
     if (currentUser) {
       const guestChats = localStorage.getItem("guestChat")
@@ -96,7 +92,6 @@ export default function AiChatInterface() {
     }
   }, [currentUser])
 
-  // Handle Send Message
   const handleSendMessage = async () => {
     if (!inputValue.trim()) return
 
@@ -112,7 +107,6 @@ export default function AiChatInterface() {
     setIsTyping(true)
 
     try {
-      // Save user message
       if (currentUser) {
         await addDoc(collection(db, "chats", currentUser.uid, "messages"), {
           content: userMessage.content,
@@ -125,7 +119,6 @@ export default function AiChatInterface() {
         localStorage.setItem("guestChat", JSON.stringify([...arr, userMessage]))
       }
 
-      // AI call
       const chatMessages = [
         ...messages.map((m) => ({ role: m.isBot ? "assistant" : "user", content: m.content })),
         { role: "user", content: inputValue },
@@ -175,14 +168,10 @@ export default function AiChatInterface() {
 
   return (
     <section id="chat" className="py-16 relative">
-      {/* Auth Modal */}
       {showAuth && !currentUser && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-lg shadow-lg relative w-full max-w-md">
-            <button
-              onClick={() => setShowAuth(false)}
-              className="absolute top-2 right-2 text-gray-500 hover:text-black"
-            >
+            <button onClick={() => setShowAuth(false)} className="absolute top-2 right-2 text-gray-500 hover:text-black">
               <X size={20} />
             </button>
             <AuthForm onSuccess={() => setShowAuth(false)} />
@@ -190,56 +179,28 @@ export default function AiChatInterface() {
         </div>
       )}
 
-      {/* Logout + Login Buttons */}
       <div className="flex justify-end max-w-4xl mx-auto mb-2">
         {currentUser ? (
-          <Button variant="outline" onClick={() => signOut(auth)}>
-            Logout
-          </Button>
+          <Button variant="outline" onClick={() => signOut(auth)}>Logout</Button>
         ) : (
-          <Button variant="outline" onClick={() => setShowAuth(true)}>
-            Login / Sign Up
-          </Button>
+          <Button variant="outline" onClick={() => setShowAuth(true)}>Login / Sign Up</Button>
         )}
       </div>
 
       <Card className="max-w-4xl mx-auto">
         <CardHeader className="text-center bg-gradient-calm">
           <CardTitle className="text-2xl text-black">AI Mental Health Assistant</CardTitle>
-          <p className="text-muted-foreground">
-            I'm here to listen and help. Everything you share is confidential.
-          </p>
+          <p className="text-muted-foreground">I'm here to listen and help. Everything you share is confidential.</p>
         </CardHeader>
         <CardContent className="p-0">
           <div className="h-96 overflow-y-auto p-4 space-y-4">
             {messages.map((message) => (
-              <div
-                key={message.id}
-                className={`flex ${message.isBot ? "justify-start" : "justify-end"}`}
-              >
-                <div
-                  className={`flex items-start space-x-2 max-w-xs lg:max-w-md ${
-                    message.isBot ? "" : "flex-row-reverse space-x-reverse"
-                  }`}
-                >
-                  <div
-                    className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                      message.isBot ? "bg-primary" : "bg-secondary"
-                    }`}
-                  >
-                    {message.isBot ? (
-                      <Bot className="w-4 h-4 text-primary-foreground" />
-                    ) : (
-                      <User className="w-4 h-4 text-secondary-foreground" />
-                    )}
+              <div key={message.id} className={`flex ${message.isBot ? "justify-start" : "justify-end"}`}>
+                <div className={`flex items-start space-x-2 max-w-xs lg:max-w-md ${message.isBot ? "" : "flex-row-reverse space-x-reverse"}`}>
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center ${message.isBot ? "bg-primary" : "bg-secondary"}`}>
+                    {message.isBot ? <Bot className="w-4 h-4 text-primary-foreground" /> : <User className="w-4 h-4 text-secondary-foreground" />}
                   </div>
-                  <div
-                    className={`p-3 rounded-lg ${
-                      message.isBot
-                        ? "bg-muted text-foreground"
-                        : "bg-primary text-primary-foreground"
-                    }`}
-                  >
+                  <div className={`p-3 rounded-lg ${message.isBot ? "bg-muted text-foreground" : "bg-primary text-primary-foreground"}`}>
                     <p className="text-sm">{message.content}</p>
                   </div>
                 </div>
@@ -255,16 +216,11 @@ export default function AiChatInterface() {
               onChange={(e) => setInputValue(e.target.value)}
               onKeyDown={handleKeyPress}
             />
-            <Button onClick={handleSendMessage} disabled={isTyping}>
-              <Send />
-            </Button>
-            <Button onClick={isListening ? stopListening : startListening}>
-              <Mic />
-            </Button>
+            <Button onClick={handleSendMessage} disabled={isTyping}><Send /></Button>
+            <Button onClick={isListening ? stopListening : startListening}><Mic /></Button>
           </div>
         </CardContent>
       </Card>
     </section>
   )
 }
-
