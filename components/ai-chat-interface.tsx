@@ -9,7 +9,7 @@ import { useSpeechToText } from "@/hooks/useSpeechToText"
 import AuthForm from "../components/authform"
 import { onAuthStateChanged, signOut, User as FirebaseUser } from "firebase/auth"
 import { db, auth } from "@/lib/firebase"
-import { collection, query, where, orderBy, onSnapshot, addDoc, serverTimestamp } from "firebase/firestore"
+import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp } from "firebase/firestore"
 
 interface Message {
   id: string
@@ -56,12 +56,11 @@ export default function AiChatInterface() {
     if (transcript) setInputValue(transcript)
   }, [transcript])
 
-  // Load messages: guest or logged-in user
+  // Load messages for logged-in user OR guest
   useEffect(() => {
     if (currentUser) {
       const q = query(
-        collection(db, "messages"),
-        where("userId", "==", currentUser.uid),
+        collection(db, "chats", currentUser.uid, "messages"),
         orderBy("createdAt", "asc")
       )
       const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -86,8 +85,7 @@ export default function AiChatInterface() {
       if (guestChats) {
         const chats = JSON.parse(guestChats)
         chats.forEach(async (msg: any) => {
-          await addDoc(collection(db, "messages"), {
-            userId: currentUser.uid,
+          await addDoc(collection(db, "chats", currentUser.uid, "messages"), {
             content: msg.content,
             isBot: msg.isBot,
             createdAt: serverTimestamp(),
@@ -114,10 +112,9 @@ export default function AiChatInterface() {
     setIsTyping(true)
 
     try {
-      // Save message
+      // Save user message
       if (currentUser) {
-        await addDoc(collection(db, "messages"), {
-          userId: currentUser.uid,
+        await addDoc(collection(db, "chats", currentUser.uid, "messages"), {
           content: userMessage.content,
           isBot: false,
           createdAt: serverTimestamp(),
@@ -152,8 +149,7 @@ export default function AiChatInterface() {
       setMessages((prev) => [...prev, botMessage])
 
       if (currentUser) {
-        await addDoc(collection(db, "messages"), {
-          userId: currentUser.uid,
+        await addDoc(collection(db, "chats", currentUser.uid, "messages"), {
           content: botMessage.content,
           isBot: true,
           createdAt: serverTimestamp(),
@@ -271,3 +267,4 @@ export default function AiChatInterface() {
     </section>
   )
 }
+
