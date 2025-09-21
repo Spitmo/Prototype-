@@ -43,6 +43,8 @@ export default function AiChatInterface() {
 
   // Generate or get guest user ID
   const getOrCreateGuestId = (): string => {
+    if (typeof window === 'undefined') return '';
+    
     let guestId = localStorage.getItem('guestUserId');
     if (!guestId) {
       guestId = `guest_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -62,165 +64,189 @@ export default function AiChatInterface() {
     if (transcript) setInputValue(transcript)
   }, [transcript])
 
-  // Track auth state - YE WALA FUNCTION COMPLETELY CHANGE KARNA HAI
+  // Track auth state - FIXED: Auto login nahi hoga
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      console.log("Auth state changed:", user ? "User logged in" : "User logged out");
+      
       if (user) {
         // User signed in
-        setCurrentUser(user)
-        setShowAuth(false)
+        setCurrentUser(user);
+        setShowAuth(false);
         
-        // Check if we have guest messages to transfer
-        const storedGuestId = localStorage.getItem('guestUserId');
-        if (storedGuestId) {
-          transferGuestMessages(user.uid, storedGuestId);
-        }
+        // Load user's messages
+        loadUserMessages(user.uid);
       } else {
-        // User signed out - create NEW guest session
-        const newGuestId = `guest_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-        localStorage.setItem('guestUserId', newGuestId);
-        setGuestUserId(newGuestId);
+        // User signed out - create NEW guest session (purana data nahi dikhega)
+        const guestId = getOrCreateGuestId();
+        setGuestUserId(guestId);
         setCurrentUser(null);
         
-        // Reset to initial message for new guest session
+        // Load guest messages for this NEW session only
+        loadGuestMessages(guestId);
+      }
+    });
+    
+    return () => unsubscribe();
+  }, []);
+
+  // Load user messages - FIXED VERSION
+  const loadUserMessages = (userId: string) => {
+    console.log("Loading messages for user:", userId);
+    const q = query(
+      collection(db, "messages"),
+      where("userId", "==", userId),
+      orderBy("createdAt", "asc")
+    );
+    
+    return onSnapshot(q, (snap) => {
+      const loadedMessages = snap.docs.map((doc) => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          content: data.content,
+          isBot: data.isBot,
+          createdAt: data.createdAt,
+          userId: data.userId
+        } as Message;
+      });
+      
+      console.log("Loaded user messages:", loadedMessages);
+      
+      if (loadedMessages.length > 0) {
+        setMessages(prev => {
+          const initialMsg = prev.find(m => m.id === "init") || 
+            { id: "init", content: "I am your friendly assistant here to help you with anything you need.", isBot: true };
+          return [initialMsg, ...loadedMessages];
+        });
+      }
+    }, (error) => {
+      console.error("Error loading user messages:", error);
+      // Fallback: Try without orderBy if index issue
+      if (error.code === 'failed-precondition') {
+        const simpleQ = query(
+          collection(db, "messages"),
+          where("userId", "==", userId)
+        );
+        onSnapshot(simpleQ, (simpleSnap) => {
+          const simpleMessages = simpleSnap.docs.map((doc) => {
+            const data = doc.data();
+            return {
+              id: doc.id,
+              content: data.content,
+              isBot: data.isBot,
+              createdAt: data.createdAt,
+              userId: data.userId
+            } as Message;
+          });
+          
+          // Sort manually on client side
+          simpleMessages.sort((a, b) => {
+            if (a.createdAt && b.createdAt) {
+              return a.createdAt.toDate() - b.createdAt.toDate();
+            }
+            return 0;
+          });
+          
+          setMessages(prev => {
+            const initialMsg = prev.find(m => m.id === "init") || 
+              { id: "init", content: "I am your friendly assistant here to help you with anything you need.", isBot: true };
+            return [initialMsg, ...simpleMessages];
+          });
+        });
+      }
+    });
+  };
+
+  // Load guest messages
+  const loadGuestMessages = (guestId: string) => {
+    console.log("Loading messages for guest:", guestId);
+    const q = query(
+      collection(db, "messages"),
+      where("userId", "==", guestId),
+      orderBy("createdAt", "asc")
+    );
+    
+    return onSnapshot(q, (snap) => {
+      const loadedMessages = snap.docs.map((doc) => ({
+        id: doc.id,
+        content: doc.data().content,
+        isBot: doc.data().isBot,
+        createdAt: doc.data().createdAt,
+        userId: doc.data().userId
+      } as Message));
+      
+      console.log("Loaded guest messages:", loadedMessages.length);
+      
+      if (loadedMessages.length > 0) {
+        setMessages(prev => {
+          const initialMsg = prev.find(m => m.id === "init") || 
+            { id: "init", content: "I am your friendly assistant here to help you with anything you need.", isBot: true };
+          return [initialMsg, ...loadedMessages];
+        });
+      } else {
+        // New guest - show only initial message
         setMessages([
           { id: "init", content: "I am your friendly assistant here to help you with anything you need.", isBot: true }
         ]);
       }
-    })
-    
-    return () => unsubscribe()
-  }, [])
+    }, (error) => {
+      console.error("Error loading guest messages:", error);
+    });
+  };
 
-  // Transfer guest messages to authenticated user (IMPROVED)
-  const transferGuestMessages = async (userId: string, guestId: string) => {
+  // AI response function
+  const getAIResponse = async (userMessage: string, chatHistory: Message[]) => {
     try {
-      const q = query(collection(db, "messages"), where("userId", "==", guestId));
-      const querySnapshot = await getDocs(q);
-      if (querySnapshot.empty) {
-        localStorage.removeItem("guestUserId");
-        return;
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          messages: [
+            ...chatHistory
+              .filter(m => m.id !== "init")
+              .map(m => ({ 
+                role: m.isBot ? "assistant" : "user", 
+                content: m.content 
+              })),
+            { role: "user", content: userMessage }
+          ]
+        }),
+      });
+      
+      if (!res.ok) {
+        throw new Error(`API error: ${res.status}`);
       }
-
-      const batch = writeBatch(db);
-      const transferredMessages: Message[] = [];
       
-      querySnapshot.forEach((document) => {
-        const messageData = document.data();
-        const newMessageRef = doc(collection(db, "messages"));
-        
-        batch.set(newMessageRef, { 
-          ...messageData, 
-          userId: userId 
-        });
-        
-        batch.delete(document.ref);
-        
-        transferredMessages.push({
-          id: newMessageRef.id,
-          content: messageData.content,
-          isBot: messageData.isBot,
-          userId: userId,
-          createdAt: messageData.createdAt
-        });
-      });
-
-      await batch.commit();
-      localStorage.removeItem("guestUserId");
-      
-      // Update UI with transferred messages
-      setMessages(prev => {
-        const initialMsg = prev.find(m => m.id === "init") || 
-          { id: "init", content: "I am your friendly assistant here to help you with anything you need.", isBot: true };
-        return [initialMsg, ...transferredMessages];
-      });
+      const data = await res.json();
+      return data.text || "I'm here to help. How can I assist you today?";
       
     } catch (error) {
-      console.error("Error transferring messages:", error);
+      console.error("API Error:", error);
+      return "I'm experiencing some technical difficulties. Please try again in a moment.";
     }
   };
 
-  // Load messages - YE BHI FIX KARNA HAI
-  useEffect(() => {
-    let unsubscribe: (() => void) | null = null
-    
-    if (currentUser) {
-      // Load authenticated user's messages
-      const q = query(
-        collection(db, "messages"),
-        where("userId", "==", currentUser.uid),
-        orderBy("createdAt", "asc")
-      )
-      
-      unsubscribe = onSnapshot(q, (snap) => {
-        const loadedMessages = snap.docs.map((doc) => ({
-          id: doc.id,
-          content: doc.data().content,
-          isBot: doc.data().isBot,
-          createdAt: doc.data().createdAt,
-          userId: doc.data().userId
-        } as Message))
-        
-        // Only update if we have messages
-        if (loadedMessages.length > 0) {
-          setMessages(prev => {
-            const initialMsg = prev.find(m => m.id === "init") || 
-              { id: "init", content: "I am your friendly assistant here to help you with anything you need.", isBot: true };
-            return [initialMsg, ...loadedMessages.filter(m => m.id !== "init")];
-          });
-        }
-      });
-    } else if (guestUserId) {
-      // Load guest user's messages
-      const q = query(
-        collection(db, "messages"),
-        where("userId", "==", guestUserId),
-        orderBy("createdAt", "asc")
-      )
-      
-      unsubscribe = onSnapshot(q, (snap) => {
-        const loadedMessages = snap.docs.map((doc) => ({
-          id: doc.id,
-          content: doc.data().content,
-          isBot: doc.data().isBot,
-          createdAt: doc.data().createdAt,
-          userId: doc.data().userId
-        } as Message))
-        
-        // Only update if we have messages
-        if (loadedMessages.length > 0) {
-          setMessages(prev => {
-            const initialMsg = prev.find(m => m.id === "init") || 
-              { id: "init", content: "I am your friendly assistant here to help you with anything you need.", isBot: true };
-            return [initialMsg, ...loadedMessages.filter(m => m.id !== "init")];
-          });
-        }
-      });
-    }
-
-    return () => {
-      if (unsubscribe) unsubscribe()
-    }
-  }, [currentUser, guestUserId])
-
   const handleSendMessage = async () => {
-    if (!inputValue.trim()) return
-    const text = inputValue.trim()
-    const userId = currentUser ? currentUser.uid : guestUserId
+    if (!inputValue.trim()) return;
     
+    const userId = currentUser ? currentUser.uid : guestUserId;
     if (!userId) {
-      setMessages(p => [...p, { 
-        id: Date.now().toString(), 
-        content: "Please refresh and try again.", 
-        isBot: true 
-      }]);
+      console.error("No user ID available");
       return;
     }
 
-    const userMsg: Message = { id: Date.now().toString(), content: text, isBot: false, userId }
-    setMessages(p => [...p, userMsg])
-    setInputValue("")
-    setIsTyping(true)
+    const text = inputValue.trim();
+    const userMsg: Message = { 
+      id: `user_${Date.now()}`, 
+      content: text, 
+      isBot: false, 
+      userId 
+    };
+    
+    setMessages(p => [...p, userMsg]);
+    setInputValue("");
+    setIsTyping(true);
 
     try {
       // Save user message to Firestore
@@ -229,74 +255,56 @@ export default function AiChatInterface() {
         content: text, 
         isBot: false, 
         createdAt: serverTimestamp()
-      })
+      });
 
       // Get AI response
-      const res = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          messages: [
-            ...messages
-              .filter(m => m.id !== "init")
-              .map(m => ({ 
-                role: m.isBot ? "assistant" : "user", 
-                content: m.content 
-              })),
-            { role: "user", content: text }
-          ]
-        }),
-      })
-      
-      if (!res.ok) throw new Error('API response not OK');
-      
-      const data = await res.json()
+      const botResponse = await getAIResponse(text, messages);
       const botMsg: Message = { 
-        id: (Date.now() + 1).toString(), 
-        content: data.text || "I'm here to help. How can I assist you today?", 
+        id: `bot_${Date.now()}`, 
+        content: botResponse, 
         isBot: true, 
         userId 
-      }
+      };
       
-      setMessages(p => [...p, botMsg])
+      setMessages(p => [...p, botMsg]);
 
       // Save bot message to Firestore
       await addDoc(collection(db, "messages"), {
         userId, 
-        content: botMsg.content, 
+        content: botResponse, 
         isBot: true, 
         createdAt: serverTimestamp()
-      })
+      });
     } catch (err) {
-      console.error("Error:", err)
+      console.error("Error sending message:", err);
       setMessages(p => [...p, { 
-        id: (Date.now() + 2).toString(), 
+        id: `error_${Date.now()}`, 
         content: "Something went wrong. Try again.", 
         isBot: true,
         userId 
-      }])
+      }]);
     } finally {
-      setIsTyping(false)
+      setIsTyping(false);
     }
-  }
+  };
 
   const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") handleSendMessage()
-  }
+    if (e.key === "Enter") handleSendMessage();
+  };
 
   const handleLogout = async () => {
     try {
       await signOut(auth);
-      // Don't reset messages here - let the authStateChanged handler handle it
+      // Clear guest ID to ensure fresh session
+      localStorage.removeItem('guestUserId');
     } catch (error) {
       console.error("Logout error:", error);
     }
-  }
+  };
 
   const handleAuthSuccess = () => {
-    // AuthForm will handle the message transfer automatically
     setShowAuth(false);
-  }
+  };
 
   return (
     <section id="chat" className="py-16 relative">
@@ -306,7 +314,7 @@ export default function AiChatInterface() {
             <button onClick={() => setShowAuth(false)} className="absolute top-2 right-2">
               <X size={20} />
             </button>
-            <AuthForm onSuccess={handleAuthSuccess} currentGuestId={localStorage.getItem('guestUserId')} />
+            <AuthForm onSuccess={handleAuthSuccess} currentGuestId={guestUserId} />
           </div>
         </div>
       )}
@@ -329,9 +337,9 @@ export default function AiChatInterface() {
       <Card className="max-w-4xl mx-auto">
         <CardHeader className="text-center bg-gradient-calm">
           <CardTitle className="text-2xl text-black">AI Mental Health Assistant</CardTitle>
-          <p className="text-muted-foreground">I'm here to listen and help.</p>
+          <p className="text-muted-foreground">I'm here to listen and help. Everything you share is confidential.</p>
           {!currentUser && guestUserId && (
-            <p className="text-sm text-blue-600">You're chatting as a guest. Sign up to save your chat history.</p>
+            <p className="text-sm text-blue-600">You're chatting as a guest. Sign up to save your chat history permanently.</p>
           )}
         </CardHeader>
 
@@ -341,9 +349,9 @@ export default function AiChatInterface() {
               <div key={msg.id} className={`flex ${msg.isBot ? "justify-start" : "justify-end"}`}>
                 <div className={`flex items-start space-x-2 max-w-xs lg:max-w-md ${msg.isBot ? "" : "flex-row-reverse space-x-reverse"}`}>
                   <div className={`w-8 h-8 rounded-full flex items-center justify-center ${msg.isBot ? "bg-primary" : "bg-secondary"}`}>
-                    {msg.isBot ? <Bot className="w-4 h-4" /> : <User className="w-4 h-4" />}
+                    {msg.isBot ? <Bot className="w-4 h-4 text-primary-foreground" /> : <User className="w-4 h-4 text-secondary-foreground" />}
                   </div>
-                  <div className={`p-3 rounded-lg ${msg.isBot ? "bg-muted" : "bg-primary text-primary-foreground"}`}>
+                  <div className={`p-3 rounded-lg ${msg.isBot ? "bg-muted text-foreground" : "bg-primary text-primary-foreground"}`}>
                     <p className="text-sm">{msg.content}</p>
                   </div>
                 </div>
@@ -353,7 +361,7 @@ export default function AiChatInterface() {
               <div className="flex justify-start">
                 <div className="flex items-start space-x-2">
                   <div className="w-8 h-8 rounded-full flex items-center justify-center bg-primary">
-                    <Bot className="w-4 h-4" />
+                    <Bot className="w-4 h-4 text-primary-foreground" />
                   </div>
                   <div className="p-3 rounded-lg bg-muted">
                     <div className="flex space-x-1">
@@ -368,7 +376,7 @@ export default function AiChatInterface() {
             <div ref={messagesEndRef} />
           </div>
 
-          <div className="p-4 border-t">
+          <div className="p-4 border-t border-border">
             <div className="flex space-x-2">
               <Input
                 value={inputValue}
