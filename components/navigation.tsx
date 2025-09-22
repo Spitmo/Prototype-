@@ -1,16 +1,14 @@
 "use client"
 
 import { useState } from "react"
+import Link from "next/link"
+import { usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { Menu, X, AlertTriangle, Shield, LogOut } from "lucide-react"
+import { Menu, X, AlertTriangle, LogIn } from "lucide-react"
 
-export default function Navigation({ onAdminLogin, isAdmin, onAdminLogout }: any) {
+export default function Navigation() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
-
-  const scrollToSection = (sectionId: string) => {
-    document.getElementById(sectionId)?.scrollIntoView({ behavior: "smooth" })
-    setIsMenuOpen(false)
-  }
+  const pathname = usePathname()
 
   const showEmergencyModal = () => {
     const modal = document.getElementById("emergency-modal")
@@ -19,63 +17,127 @@ export default function Navigation({ onAdminLogin, isAdmin, onAdminLogout }: any
     }
   }
 
+  const navItems = [
+    { href: "/", label: "Home", scroll: false },
+    { href: "/assessment", label: "Assessment" },
+    { href: "/booking", label: "Book Session" },
+    { href: "/resources", label: "Resources" },
+    { href: "/forum", label: "Peer Support" },
+  ]
+
   return (
     <nav className="sticky top-0 z-50 bg-background/95 backdrop-blur-sm border-b border-border">
       <div className="container mx-auto px-4">
-        <div className="flex items-center justify-between h-16">
-          {/* Logo */}
-          <div className="flex items-center space-x-2">
+        <div className="flex items-center h-16">
+          {/* Left Logo */}
+          <Link href="/" scroll={false} className="flex items-center space-x-2">
             <div className="text-2xl">🧠</div>
             <span className="text-xl font-bold text-primary">MindCare Campus</span>
-          </div>
+          </Link>
 
-          {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-6">
-            <button onClick={() => scrollToSection("home")} className="hover:text-primary">Home</button>
-            <button onClick={() => scrollToSection("chat")} className="hover:text-primary">AI Support</button>
-            <button onClick={() => scrollToSection("booking")} className="hover:text-primary">Book Session</button>
-            <button onClick={() => scrollToSection("resources")} className="hover:text-primary">Resources</button>
-            <button onClick={() => scrollToSection("forum")} className="hover:text-primary">Peer Support</button>
-            {/* ✅ Added Assessment */}
-            <button onClick={() => scrollToSection("screening")} className="hover:text-primary">Assessment</button>
-          </div>
+          {/* Center Navigation */}
+          <div className="hidden md:flex items-center space-x-6 mx-auto">
+            {navItems.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                scroll={item.scroll === false ? false : true}
+                className={`relative transition-colors duration-200 ${
+                  pathname === item.href
+                    ? "text-primary font-medium after:w-full"
+                    : "text-foreground hover:text-primary after:w-0"
+                } 
+                after:content-[''] after:absolute after:left-0 after:-bottom-1 after:h-[2px] 
+                after:bg-primary after:transition-all after:duration-300 hover:after:w-full`}
+              >
+                {item.label}
+              </Link>
+            ))}
 
-          {/* Right Side Buttons */}
-          <div className="flex items-center space-x-4">
-            <Button onClick={showEmergencyModal} variant="destructive" size="sm">
-              <AlertTriangle className="w-4 h-4 mr-1" /> Crisis Help
+            {/* Crisis Help Button */}
+            <Button
+              onClick={showEmergencyModal}
+              variant="destructive"
+              size="sm"
+              className="flex items-center space-x-1"
+            >
+              <AlertTriangle className="w-4 h-4" />
+              <span>Crisis Help</span>
             </Button>
 
-            {isAdmin ? (
-              <Button onClick={onAdminLogout} variant="outline" size="sm">
-                <LogOut className="w-4 h-4 mr-1" /> Logout Admin
-              </Button>
-            ) : (
-              <Button onClick={onAdminLogin} variant="outline" size="sm">
-                <Shield className="w-4 h-4 mr-1" /> As Admin
-              </Button>
-            )}
-
-            {/* Mobile Menu Toggle */}
-            <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="md:hidden p-2">
-              {isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-            </button>
+            {/* Login Button */}
+            <Button
+              asChild
+              size="sm"
+              className="flex items-center space-x-1 bg-primary text-white hover:bg-primary/90"
+            >
+              <Link href="/login">
+                <LogIn className="w-4 h-4" />
+                <span>Login</span>
+              </Link>
+            </Button>
           </div>
-        </div>
-      </div>
 
-      {/* Mobile Menu Items */}
-      {isMenuOpen && (
-        <div className="absolute top-16 left-0 w-full bg-background shadow-md flex flex-col space-y-4 p-4 md:hidden">
-          <button onClick={() => scrollToSection("home")} className="hover:text-primary">Home</button>
-          <button onClick={() => scrollToSection("chat")} className="hover:text-primary">AI Support</button>
-          <button onClick={() => scrollToSection("booking")} className="hover:text-primary">Book Session</button>
-          <button onClick={() => scrollToSection("resources")} className="hover:text-primary">Resources</button>
-          <button onClick={() => scrollToSection("forum")} className="hover:text-primary">Peer Support</button>
-          {/* ✅ Added Assessment in mobile menu too */}
-          <button onClick={() => scrollToSection("screening")} className="hover:text-primary">Assessment</button>
+          {/* Right - Mobile Menu Button */}
+          <button
+            onClick={() => setIsMenuOpen(!isMenuOpen)}
+            className="md:hidden p-2 ml-auto"
+          >
+            {isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+          </button>
         </div>
-      )}
+
+        {/* Mobile Navigation */}
+        {isMenuOpen && (
+          <div className="md:hidden py-4 border-t border-border">
+            <div className="flex flex-col space-y-2">
+              {navItems.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  scroll={item.scroll === false ? false : true}
+                  onClick={() => setIsMenuOpen(false)}
+                  className={`relative py-2 transition-colors duration-200 ${
+                    pathname === item.href
+                      ? "text-primary font-medium after:w-full"
+                      : "text-foreground hover:text-primary after:w-0"
+                  } 
+                  after:content-[''] after:absolute after:left-0 after:bottom-0 after:h-[2px] 
+                  after:bg-primary after:transition-all after:duration-300 hover:after:w-full`}
+                >
+                  {item.label}
+                </Link>
+              ))}
+
+              {/* Crisis Help (Mobile) */}
+              <Button
+                onClick={() => {
+                  showEmergencyModal()
+                  setIsMenuOpen(false)
+                }}
+                variant="destructive"
+                size="sm"
+                className="w-full flex items-center justify-center space-x-1"
+              >
+                <AlertTriangle className="w-4 h-4" />
+                <span>Crisis Help</span>
+              </Button>
+
+              {/* Login (Mobile) */}
+              <Button
+                asChild
+                size="sm"
+                className="w-full flex items-center justify-center space-x-1 bg-primary text-white hover:bg-primary/90"
+              >
+                <Link href="/login" onClick={() => setIsMenuOpen(false)}>
+                  <LogIn className="w-4 h-4" />
+                  <span>Login</span>
+                </Link>
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
     </nav>
   )
 }

@@ -1,16 +1,11 @@
 "use client"
 
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { MessageCircle, Calendar } from "lucide-react"
 
 export default function HeroSection() {
-  const scrollToChat = () => {
-    document.getElementById("chat")?.scrollIntoView({ behavior: "smooth" })
-  }
-
-  const scrollToBooking = () => {
-    document.getElementById("booking")?.scrollIntoView({ behavior: "smooth" })
-  }
+  const router = useRouter()
 
   return (
     <section id="home" className="text-center py-20">
@@ -20,10 +15,9 @@ export default function HeroSection() {
             <div className="bg-white rounded-lg h-full w-full"></div>
           </div>
           <div className="relative">
-            <h1 className="text-4xl md:text-6xl font-bold text-balance bg-gradient-to-b from-gray-800 via-black to-gray-600 bg-clip-text text-transparent">
-              MindCare - Every thought matters here
+            <h1 className="h-33 text-4xl md:text-6xl font-bold text-balance bg-gradient-to-b from-gray-800 via-black to-gray-600 bg-clip-text text-transparent">
+              MindCare - Every Thought Matters Here
             </h1>
-            {/* <div className="w-full h-1 bg-gradient-to-r from-blue-600 via-blue-500 to-blue-600 mt-4 rounded-full"></div> */}
           </div>
         </div>
 
@@ -32,8 +26,9 @@ export default function HeroSection() {
         </p>
 
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          {/* AI Chat Button */}
           <Button
-            onClick={scrollToChat}
+            onClick={() => router.push("/chat")}
             size="lg"
             style={{
               backgroundColor: "#059669",
@@ -45,8 +40,10 @@ export default function HeroSection() {
             <MessageCircle className="w-5 h-5 mr-2" />
             Start AI Chat Support
           </Button>
+
+          {/* Booking Button */}
           <Button
-            onClick={scrollToBooking}
+            onClick={() => router.push("/booking")}
             variant="outline"
             size="lg"
             className="border-primary text-primary hover:bg-primary hover:text-primary-foreground bg-transparent"

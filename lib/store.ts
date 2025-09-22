@@ -24,7 +24,6 @@ interface Student {
 }
 
 interface AppState {
-  // Dashboard metrics
   totalUsers: number
   registeredUsers: number
   sessionsBooked: number
@@ -32,15 +31,12 @@ interface AppState {
   forumPosts: number
   emergencyContacts: number
   assessmentsCompleted: number
-
-  // Students data
   students: Student[]
 
   isAdminAuthenticated: boolean
   chatbotUsage: number
   crisisHelplineClicks: number
 
-  // Actions
   incrementBookings: () => void
   incrementResourceViews: () => void
   incrementForumPosts: () => void
@@ -49,7 +45,7 @@ interface AppState {
   incrementRegisteredUsers: () => void
   addStudent: (student: Student) => Promise<void>
   updateStudentAssessment: (id: string, scores: { phq9?: number; gad7?: number; ghqScore?: number }) => Promise<void>
-  completeAssessment: (student: Student) => Promise<void>  // ✅ assessment complete karega
+  completeAssessment: (student: Student) => Promise<void>
   resetMetrics: () => void
   authenticateAdmin: (email: string, password: string) => boolean
   logoutAdmin: () => void
@@ -100,7 +96,6 @@ export const useAppStore = create<AppState>()(
         }
       },
 
-      // ✅ Jab bhi assessment complete ho → student ko Firestore + local store dono me save karo
       completeAssessment: async (student) => {
         try {
           await addDoc(collection(db, "students"), {
