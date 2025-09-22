@@ -72,7 +72,12 @@ export default function AIChatInterface() {
       if (user) {
         setCurrentUser(user)
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
         loadMessages(user.uid)
+=======
+        setShowAuth(false)
+        unsubMessages = loadMessages(user.uid)
+>>>>>>> Stashed changes
 =======
         setShowAuth(false)
         unsubMessages = loadMessages(user.uid)
@@ -99,6 +104,10 @@ export default function AIChatInterface() {
       orderBy("createdAt", "asc")
     )
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
+=======
+
+>>>>>>> Stashed changes
 =======
 
 >>>>>>> Stashed changes

@@ -3,8 +3,14 @@
 import { useState } from "react"
 import { auth, db } from "@/lib/firebase"
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 import { signInWithEmailAndPassword } from "firebase/auth"
 import { doc, getDoc } from "firebase/firestore"
+=======
+import { signInWithEmailAndPassword, signOut } from "firebase/auth"
+import { doc, getDoc } from "firebase/firestore"
+import { useAppStore } from "@/lib/store"
+>>>>>>> Stashed changes
 =======
 import { signInWithEmailAndPassword, signOut } from "firebase/auth"
 import { doc, getDoc } from "firebase/firestore"
@@ -20,6 +26,7 @@ interface AdminLoginModalProps {
 export default function AdminLoginModal({ isOpen, onClose, onSuccess }: AdminLoginModalProps) {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
+<<<<<<< Updated upstream
 <<<<<<< Updated upstream
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
@@ -48,6 +55,12 @@ export default function AdminLoginModal({ isOpen, onClose, onSuccess }: AdminLog
       setLoading(false)
     }
   }
+=======
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState("")
+
+  const setAdminAuth = useAppStore((state) => state.authenticateAdmin) // ✅ store function
+>>>>>>> Stashed changes
 =======
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
@@ -115,7 +128,13 @@ export default function AdminLoginModal({ isOpen, onClose, onSuccess }: AdminLog
             required
           />
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
           {error && <p className="text-red-500 text-sm">{error}</p>}
+=======
+
+          {error && <p className="text-sm text-red-600">{error}</p>}
+
+>>>>>>> Stashed changes
 =======
 
           {error && <p className="text-sm text-red-600">{error}</p>}
