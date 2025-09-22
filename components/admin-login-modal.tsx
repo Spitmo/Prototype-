@@ -13,7 +13,7 @@ import { db } from "@/lib/firebase"
 interface AdminLoginModalProps {
   isOpen: boolean
   onClose: () => void
-  onSuccess: () => void
+  onSuccess?: () => void   // ✅ make it optional
 }
 
 export default function AdminLoginModal({ isOpen, onClose, onSuccess }: AdminLoginModalProps) {
@@ -55,7 +55,8 @@ export default function AdminLoginModal({ isOpen, onClose, onSuccess }: AdminLog
         return
       }
 
-      onSuccess()
+      // ✅ safe call
+      if (onSuccess) onSuccess()
       onClose()
 
     } catch (err: any) {

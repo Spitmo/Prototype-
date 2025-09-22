@@ -128,9 +128,8 @@ export const useAppStore = create<AppState>()(
       authenticateAdmin: (email: string, password: string) => {
         // Admin credentials - in production, this should be more secure
         const validCredentials = [
-          { email: "admin@mindcare.edu", password: "MindCare2024!" },
-          { email: "authority@college.edu", password: "Authority@123" },
-          { email: "counselor@mindcare.edu", password: "Counselor#456" },
+          { email: "ramagrawal99001@gmail.com", password: "29112004" }
+          
         ]
 
         const isValid = validCredentials.some((cred) => cred.email === email && cred.password === password)
