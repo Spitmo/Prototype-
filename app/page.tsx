@@ -3,7 +3,6 @@
 import { useState } from "react"
 import Navigation from "@/components/navigation"
 import HeroSection from "@/components/hero-section"
-// import AIChatInterface from "@/components/ai-chat-interface"
 import PeerSupportForum from "@/components/peer-support-forum"
 import EmergencyModal from "@/components/emergency-modal"
 import BackgroundAnimation from "@/components/background-animation"
@@ -13,7 +12,7 @@ import { Button } from "@/components/ui/button"
 import { Shield, LogOut } from "lucide-react"
 import FeaturesGrid from "@/components/features-grid"
 import ChatbotPopup from "@/components/chat-popup"
-
+import AdminDashboard from "@/components/admin-dashboard"
 
 export default function Home() {
   const [showAdminLogin, setShowAdminLogin] = useState(false)
@@ -57,24 +56,29 @@ export default function Home() {
       {/* Main Content */}
       <div className="container mx-auto px-4 py-8 space-y-16">
         <HeroSection />
-
-        {/* 👇 Features Grid */}
         <FeaturesGrid />
- 
-        {/* Chat Section */}
-        <section id="chat">
-          {/* <ai-chat-interface/> */}
-        </section> 
 
-        {/* Forum Section */}
         <section id="forum">
           <PeerSupportForum />
         </section>
+
+        {/* ✅ Admin dashboard sirf admin ke liye */}
+        {isAdminAuthenticated && <AdminDashboard />}
       </div>
 
       <EmergencyModal />
-      <AdminLoginModal isOpen={showAdminLogin} onClose={() => setShowAdminLogin(false)} />
-        <ChatbotPopup />
+
+      {/* ✅ Admin login modal */}
+      <AdminLoginModal
+        isOpen={showAdminLogin}
+        onClose={() => setShowAdminLogin(false)}
+        onSuccess={() => {
+          console.log("✅ Admin login success")
+          setShowAdminLogin(false)
+        }}
+      />
+
+      <ChatbotPopup />
     </main>
   )
 }
