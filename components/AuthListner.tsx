@@ -2,33 +2,35 @@
 
 import { useEffect } from "react"
 import { onAuthStateChanged } from "firebase/auth"
-import { doc, getDoc } from "firebase/firestore"
 import { auth, db } from "@/lib/firebase"
+import { doc, getDoc } from "firebase/firestore"
 import { useAppStore } from "@/lib/store"
 
 export default function AuthListener() {
-  const setAdminAuthenticated = useAppStore((s) => s.setAdminAuthenticated)
+  const setAdminAuth = useAppStore((s) => s.setAdminAuthenticated)
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (user) => {
       if (!user) {
-        setAdminAuthenticated(false)
+        setAdminAuth(false)
         return
       }
 
       try {
-        const ref = doc(db, "users", user.uid)
-        const snap = await getDoc(ref)
-        const isAdmin = !!(snap.exists() && snap.data()?.isAdmin === true)
-        setAdminAuthenticated(isAdmin)
+        const snap = await getDoc(doc(db, "users", user.uid))
+        if (snap.exists() && snap.data()?.isAdmin === true) {
+          setAdminAuth(true)
+        } else {
+          setAdminAuth(false)
+        }
       } catch (err) {
         console.error("AuthListener error:", err)
-        setAdminAuthenticated(false)
+        setAdminAuth(false)
       }
     })
 
     return () => unsub()
-  }, [setAdminAuthenticated])
+  }, [setAdminAuth])
 
   return null
 }

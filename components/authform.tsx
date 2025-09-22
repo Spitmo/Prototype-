@@ -6,18 +6,20 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
 } from "firebase/auth"
-import { 
-  query, 
-  where, 
-  getDocs, 
-  writeBatch, 
+import {
+  query,
+  where,
+  getDocs,
+  writeBatch,
   collection,
-  doc
+  doc,
+  getDoc,
 } from "firebase/firestore"
+import { useAppStore } from "@/lib/store"
 
 interface AuthFormProps {
-  onSuccess?: () => void;
-  currentGuestId?: string | null;
+  onSuccess?: () => void
+  currentGuestId?: string | null
 }
 
 export default function AuthForm({ onSuccess, currentGuestId }: AuthFormProps) {
@@ -27,41 +29,58 @@ export default function AuthForm({ onSuccess, currentGuestId }: AuthFormProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
 
-  // Function to transfer guest messages to authenticated user
-  const transferGuestMessages = async (userId: string) => {
-    if (!currentGuestId) return;
-    
-    try {
-      const messagesRef = collection(db, "messages");
-      const q = query(messagesRef, where("userId", "==", currentGuestId));
-      const querySnapshot = await getDocs(q);
-      
-      if (querySnapshot.empty) return;
+  const authenticateAdmin = useAppStore((state) => state.authenticateAdmin)
+  const logoutAdmin = useAppStore((state) => state.logoutAdmin)
 
-      const batch = writeBatch(db);
-      
+  // ✅ Guest messages transfer
+  const transferGuestMessages = async (userId: string) => {
+    if (!currentGuestId) return
+
+    try {
+      const messagesRef = collection(db, "messages")
+      const q = query(messagesRef, where("userId", "==", currentGuestId))
+      const querySnapshot = await getDocs(q)
+
+      if (querySnapshot.empty) return
+
+      const batch = writeBatch(db)
+
       querySnapshot.forEach((document) => {
-        // Create new document with auto-generated ID
-        const newMessageRef = doc(collection(db, "messages"));
+        const newMessageRef = doc(collection(db, "messages"))
         batch.set(newMessageRef, {
           ...document.data(),
-          userId: userId
-        });
-        
-        // Delete the old guest message
-        batch.delete(document.ref);
-      });
+          userId,
+        })
+        batch.delete(document.ref)
+      })
 
-      await batch.commit();
-      console.log("Guest messages transferred successfully");
-      
-      // Clear guest ID from storage
-      localStorage.removeItem("guestUserId");
-    } catch (error) {
-      console.error("Error transferring guest messages:", error);
+      await batch.commit()
+      console.log("✅ Guest messages transferred")
+      localStorage.removeItem("guestUserId")
+    } catch (err) {
+      console.error("❌ Error transferring guest messages:", err)
     }
-  };
+  }
 
+  // ✅ Admin check
+  const checkAdmin = async (uid: string) => {
+    try {
+      const ref = doc(db, "users", uid)
+      const snap = await getDoc(ref)
+
+      if (snap.exists() && snap.data()?.isAdmin === true) {
+        console.log("👑 Admin detected:", snap.data())
+        authenticateAdmin()
+      } else {
+        logoutAdmin()
+      }
+    } catch (err) {
+      console.error("❌ Error checking admin:", err)
+      logoutAdmin()
+    }
+  }
+
+  // ✅ Handle login/signup
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!email || !password) {
@@ -73,23 +92,19 @@ export default function AuthForm({ onSuccess, currentGuestId }: AuthFormProps) {
     setError("")
 
     try {
-      if (isLogin) {
-        // Login
-        const userCredential = await signInWithEmailAndPassword(auth, email, password)
-        // Transfer guest messages if available
-        if (currentGuestId) {
-          await transferGuestMessages(userCredential.user.uid);
-        }
-        onSuccess?.()
-      } else {
-        // Signup
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password)
-        // Transfer guest messages if available
-        if (currentGuestId) {
-          await transferGuestMessages(userCredential.user.uid);
-        }
-        onSuccess?.()
+      const userCredential = isLogin
+        ? await signInWithEmailAndPassword(auth, email, password)
+        : await createUserWithEmailAndPassword(auth, email, password)
+
+      const uid = userCredential.user.uid
+
+      if (currentGuestId) {
+        await transferGuestMessages(uid)
       }
+
+      await checkAdmin(uid)
+
+      onSuccess?.()
     } catch (err: any) {
       setError("❌ " + err.message)
     } finally {
@@ -148,9 +163,7 @@ export default function AuthForm({ onSuccess, currentGuestId }: AuthFormProps) {
           onClick={() => setIsLogin(!isLogin)}
           className="text-blue-600 cursor-pointer hover:underline"
         >
-          {isLogin
-            ? "Need an account? Sign up"
-            : "Already have an account? Login"}
+          {isLogin ? "Need an account? Sign up" : "Already have an account? Login"}
         </span>
       </p>
     </form>

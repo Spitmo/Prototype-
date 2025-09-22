@@ -71,17 +71,7 @@ export default function AIChatInterface() {
 
       if (user) {
         setCurrentUser(user)
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-        loadMessages(user.uid)
-=======
-        setShowAuth(false)
         unsubMessages = loadMessages(user.uid)
->>>>>>> Stashed changes
-=======
-        setShowAuth(false)
-        unsubMessages = loadMessages(user.uid)
->>>>>>> Stashed changes
       } else {
         const guestId = getOrCreateGuestId()
         setGuestUserId(guestId)
@@ -103,14 +93,7 @@ export default function AIChatInterface() {
       where("userId", "==", userId),
       orderBy("createdAt", "asc")
     )
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-=======
 
->>>>>>> Stashed changes
-=======
-
->>>>>>> Stashed changes
     return onSnapshot(q, (snap) => {
       const loaded = snap.docs.map((doc) => ({
         id: doc.id,

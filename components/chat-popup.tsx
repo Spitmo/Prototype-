@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
-import { Bot, MessageCircle } from "lucide-react"
+import { Bot, MessageCircle, X } from "lucide-react"
 
 interface Message {
   id: string
@@ -15,6 +15,7 @@ export default function ChatWidget() {
   const [lastMessage, setLastMessage] = useState(
     "👋 Hi! I'm your AI Health Assistant. How are you feeling today?"
   )
+  const [isOpen, setIsOpen] = useState(true) // ✅ toggle state
   const router = useRouter()
 
   // Load last message from localStorage
@@ -28,17 +29,25 @@ export default function ChatWidget() {
     }
   }, [])
 
+  if (!isOpen) return null // ✅ hide widget when closed
+
   return (
     <div className="fixed bottom-6 left-6 w-80 rounded-2xl shadow-2xl border border-gray-200 bg-white overflow-hidden">
       {/* Header */}
-      <div className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-4 py-3 flex items-center gap-2">
-        <div className="w-9 h-9 rounded-full bg-white flex items-center justify-center">
-          <Bot className="w-5 h-5 text-green-600" />
+      <div className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-4 py-3 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <div className="w-9 h-9 rounded-full bg-white flex items-center justify-center">
+            <Bot className="w-5 h-5 text-green-600" />
+          </div>
+          <div>
+            <h3 className="font-semibold">AI Health Assistant</h3>
+            <p className="text-xs text-green-100">Online</p>
+          </div>
         </div>
-        <div>
-          <h3 className="font-semibold">AI Health Assistant</h3>
-          <p className="text-xs text-green-100">Online</p>
-        </div>
+        {/* ✅ Close Button */}
+        <button onClick={() => setIsOpen(false)} className="p-1 rounded hover:bg-green-600/30">
+          <X className="w-5 h-5" />
+        </button>
       </div>
 
       {/* Body - last message preview */}
