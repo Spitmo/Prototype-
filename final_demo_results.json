@@ -1,0 +1,387 @@
+[
+  {
+    "message": "Hello! How can you help me?",
+    "timestamp": "2025-09-22T16:21:20.486195",
+    "mental_health": {
+      "state": "Normal",
+      "confidence": 0.9892171621322632,
+      "risk_level": "low",
+      "needs_attention": false,
+      "crisis_alert": false
+    },
+    "dialogue_act": {
+      "act": "[2 1]",
+      "confidence": 0.06295568495988846,
+      "category": "other"
+    },
+    "overall_assessment": {
+      "mental_health_confidence": "high",
+      "dialogue_confidence": "low"
+    },
+    "detailed_analysis": {
+      "mental_health_top3": [
+        {
+          "state": "Normal",
+          "confidence": 0.9892171621322632
+        },
+        {
+          "state": "Suicidal",
+          "confidence": 0.003911472391337156
+        },
+        {
+          "state": "Depression",
+          "confidence": 0.00193454185500741
+        }
+      ],
+      "dialogue_act_top3": [
+        {
+          "act": "[2 1]",
+          "confidence": 0.06295568495988846
+        },
+        {
+          "act": "[1 1]",
+          "confidence": 0.06234891340136528
+        },
+        {
+          "act": "[3 4]",
+          "confidence": 0.03639468923211098
+        }
+      ],
+      "input_length": 6,
+      "model_versions": {
+        "mental_health": "improved_v1",
+        "dialogue_act": "available_version"
+      }
+    }
+  },
+  {
+    "message": "I've been feeling really anxious lately about work and life",
+    "timestamp": "2025-09-22T16:21:21.501404",
+    "mental_health": {
+      "state": "Anxiety",
+      "confidence": 0.9778243899345398,
+      "risk_level": "medium",
+      "needs_attention": true,
+      "crisis_alert": false
+    },
+    "dialogue_act": {
+      "act": "[1 1]",
+      "confidence": 0.06923585385084152,
+      "category": "other"
+    },
+    "overall_assessment": {
+      "mental_health_confidence": "high",
+      "dialogue_confidence": "low"
+    },
+    "detailed_analysis": {
+      "mental_health_top3": [
+        {
+          "state": "Anxiety",
+          "confidence": 0.9778243899345398
+        },
+        {
+          "state": "Normal",
+          "confidence": 0.006485910154879093
+        },
+        {
+          "state": "Stress",
+          "confidence": 0.006260209251195192
+        }
+      ],
+      "dialogue_act_top3": [
+        {
+          "act": "[1 1]",
+          "confidence": 0.06923585385084152
+        },
+        {
+          "act": "[2 1 2 1]",
+          "confidence": 0.047035690397024155
+        },
+        {
+          "act": "[2 1]",
+          "confidence": 0.04679621383547783
+        }
+      ],
+      "input_length": 10,
+      "model_versions": {
+        "mental_health": "improved_v1",
+        "dialogue_act": "available_version"
+      }
+    }
+  },
+  {
+    "message": "Thank you so much for listening to me",
+    "timestamp": "2025-09-22T16:21:22.403234",
+    "mental_health": {
+      "state": "Normal",
+      "confidence": 0.9920897483825684,
+      "risk_level": "low",
+      "needs_attention": false,
+      "crisis_alert": false
+    },
+    "dialogue_act": {
+      "act": "[2 1]",
+      "confidence": 0.06038985028862953,
+      "category": "other"
+    },
+    "overall_assessment": {
+      "mental_health_confidence": "high",
+      "dialogue_confidence": "low"
+    },
+    "detailed_analysis": {
+      "mental_health_top3": [
+        {
+          "state": "Normal",
+          "confidence": 0.9920897483825684
+        },
+        {
+          "state": "Anxiety",
+          "confidence": 0.00307236285880208
+        },
+        {
+          "state": "Suicidal",
+          "confidence": 0.0014149274211376905
+        }
+      ],
+      "dialogue_act_top3": [
+        {
+          "act": "[2 1]",
+          "confidence": 0.06038985028862953
+        },
+        {
+          "act": "[1 1]",
+          "confidence": 0.05970362201333046
+        },
+        {
+          "act": "[3 4]",
+          "confidence": 0.035633791238069534
+        }
+      ],
+      "input_length": 8,
+      "model_versions": {
+        "mental_health": "improved_v1",
+        "dialogue_act": "available_version"
+      }
+    }
+  },
+  {
+    "message": "I don't know what to do anymore, everything seems hopeless",
+    "timestamp": "2025-09-22T16:21:22.801271",
+    "mental_health": {
+      "state": "Suicidal",
+      "confidence": 0.36669835448265076,
+      "risk_level": "high",
+      "needs_attention": true,
+      "crisis_alert": false
+    },
+    "dialogue_act": {
+      "act": "[1 1]",
+      "confidence": 0.06556164473295212,
+      "category": "other"
+    },
+    "overall_assessment": {
+      "mental_health_confidence": "low",
+      "dialogue_confidence": "low"
+    },
+    "detailed_analysis": {
+      "mental_health_top3": [
+        {
+          "state": "Suicidal",
+          "confidence": 0.36669835448265076
+        },
+        {
+          "state": "Normal",
+          "confidence": 0.3193788230419159
+        },
+        {
+          "state": "Depression",
+          "confidence": 0.2741510272026062
+        }
+      ],
+      "dialogue_act_top3": [
+        {
+          "act": "[1 1]",
+          "confidence": 0.06556164473295212
+        },
+        {
+          "act": "[2 1]",
+          "confidence": 0.06309585273265839
+        },
+        {
+          "act": "[3 4]",
+          "confidence": 0.036056872457265854
+        }
+      ],
+      "input_length": 10,
+      "model_versions": {
+        "mental_health": "improved_v1",
+        "dialogue_act": "available_version"
+      }
+    }
+  },
+  {
+    "message": "Can you recommend some coping strategies for stress?",
+    "timestamp": "2025-09-22T16:21:23.216351",
+    "mental_health": {
+      "state": "Stress",
+      "confidence": 0.9386598467826843,
+      "risk_level": "medium",
+      "needs_attention": true,
+      "crisis_alert": false
+    },
+    "dialogue_act": {
+      "act": "[2 1]",
+      "confidence": 0.06405573338270187,
+      "category": "other"
+    },
+    "overall_assessment": {
+      "mental_health_confidence": "high",
+      "dialogue_confidence": "low"
+    },
+    "detailed_analysis": {
+      "mental_health_top3": [
+        {
+          "state": "Stress",
+          "confidence": 0.9386598467826843
+        },
+        {
+          "state": "Normal",
+          "confidence": 0.034793734550476074
+        },
+        {
+          "state": "Depression",
+          "confidence": 0.011628118343651295
+        }
+      ],
+      "dialogue_act_top3": [
+        {
+          "act": "[2 1]",
+          "confidence": 0.06405573338270187
+        },
+        {
+          "act": "[1 1]",
+          "confidence": 0.0600886307656765
+        },
+        {
+          "act": "[2 1 2 1]",
+          "confidence": 0.03525325655937195
+        }
+      ],
+      "input_length": 8,
+      "model_versions": {
+        "mental_health": "improved_v1",
+        "dialogue_act": "available_version"
+      }
+    }
+  },
+  {
+    "message": "That was very helpful, I really appreciate your support",
+    "timestamp": "2025-09-22T16:21:23.788252",
+    "mental_health": {
+      "state": "Normal",
+      "confidence": 0.9903592467308044,
+      "risk_level": "low",
+      "needs_attention": false,
+      "crisis_alert": false
+    },
+    "dialogue_act": {
+      "act": "[1 1]",
+      "confidence": 0.05791754275560379,
+      "category": "other"
+    },
+    "overall_assessment": {
+      "mental_health_confidence": "high",
+      "dialogue_confidence": "low"
+    },
+    "detailed_analysis": {
+      "mental_health_top3": [
+        {
+          "state": "Normal",
+          "confidence": 0.9903592467308044
+        },
+        {
+          "state": "Suicidal",
+          "confidence": 0.0027690634597092867
+        },
+        {
+          "state": "Anxiety",
+          "confidence": 0.0024487220216542482
+        }
+      ],
+      "dialogue_act_top3": [
+        {
+          "act": "[1 1]",
+          "confidence": 0.05791754275560379
+        },
+        {
+          "act": "[2 1]",
+          "confidence": 0.057000529021024704
+        },
+        {
+          "act": "[2 1 2 1]",
+          "confidence": 0.03774707019329071
+        }
+      ],
+      "input_length": 9,
+      "model_versions": {
+        "mental_health": "improved_v1",
+        "dialogue_act": "available_version"
+      }
+    }
+  },
+  {
+    "message": "I'm thinking about ending it all, nothing matters anymore",
+    "timestamp": "2025-09-22T16:21:24.642599",
+    "mental_health": {
+      "state": "Suicidal",
+      "confidence": 0.7384498119354248,
+      "risk_level": "high",
+      "needs_attention": true,
+      "crisis_alert": true
+    },
+    "dialogue_act": {
+      "act": "[1 1]",
+      "confidence": 0.06409008800983429,
+      "category": "other"
+    },
+    "overall_assessment": {
+      "mental_health_confidence": "medium",
+      "dialogue_confidence": "low"
+    },
+    "detailed_analysis": {
+      "mental_health_top3": [
+        {
+          "state": "Suicidal",
+          "confidence": 0.7384498119354248
+        },
+        {
+          "state": "Depression",
+          "confidence": 0.15768924355506897
+        },
+        {
+          "state": "Normal",
+          "confidence": 0.07866872847080231
+        }
+      ],
+      "dialogue_act_top3": [
+        {
+          "act": "[1 1]",
+          "confidence": 0.06409008800983429
+        },
+        {
+          "act": "[2 1]",
+          "confidence": 0.06188187748193741
+        },
+        {
+          "act": "[3 4]",
+          "confidence": 0.03690174221992493
+        }
+      ],
+      "input_length": 9,
+      "model_versions": {
+        "mental_health": "improved_v1",
+        "dialogue_act": "available_version"
+      }
+    }
+  }
+]
