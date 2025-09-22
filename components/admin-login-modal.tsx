@@ -1,130 +1,128 @@
 "use client"
 
-import type React from "react"
-
 import { useState } from "react"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { useAppStore } from "@/lib/store"
-import { Eye, EyeOff, Shield } from "lucide-react"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { X, Lock } from "lucide-react"
+import { signInWithEmailAndPassword } from "firebase/auth"
+import { auth } from "@/lib/firebase"
+import { doc, getDoc } from "firebase/firestore"
+import { db } from "@/lib/firebase"
 
 interface AdminLoginModalProps {
   isOpen: boolean
   onClose: () => void
+  onSuccess?: () => void   // ✅ make it optional
 }
 
-export default function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
+export default function AdminLoginModal({ isOpen, onClose, onSuccess }: AdminLoginModalProps) {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
-  const [showPassword, setShowPassword] = useState(false)
+  const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
-  const [isLoading, setIsLoading] = useState(false)
 
-  const authenticateAdmin = useAppStore((state) => state.authenticateAdmin)
-
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsLoading(true)
-    setError("")
-
-    // Simulate loading delay
-    await new Promise((resolve) => setTimeout(resolve, 1000))
-
-    const isAuthenticated = authenticateAdmin(email, password)
-
-    if (isAuthenticated) {
-      onClose()
-      setEmail("")
-      setPassword("")
-    } else {
-      setError("Invalid credentials. Please check your email and password.")
+  const checkAdminAccess = async (userId: string): Promise<boolean> => {
+    try {
+      const userDoc = await getDoc(doc(db, "users", userId))
+      return userDoc.exists() && userDoc.data()?.isAdmin === true
+    } catch (error) {
+      console.error("Error checking admin access:", error)
+      return false
     }
-
-    setIsLoading(false)
   }
 
-  return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-center justify-center">
-            <Shield className="h-5 w-5 text-orange-500" />
-            Admin Access
-          </DialogTitle>
-        </DialogHeader>
+  const handleAdminLogin = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!email || !password) {
+      setError("Please enter email and password")
+      return
+    }
 
-        <form onSubmit={handleLogin} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="email">Email Address</Label>
+    setLoading(true)
+    setError("")
+
+    try {
+      // Sign in user
+      const userCredential = await signInWithEmailAndPassword(auth, email, password)
+      
+      // Check if user is admin
+      const isAdmin = await checkAdminAccess(userCredential.user.uid)
+      
+      if (!isAdmin) {
+        setError("Access denied. Admin privileges required.")
+        await auth.signOut()
+        return
+      }
+
+      // ✅ safe call
+      if (onSuccess) onSuccess()
+      onClose()
+
+    } catch (err: any) {
+      setError(err.message || "Login failed")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  if (!isOpen) return null
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white p-6 rounded-lg shadow-lg relative w-full max-w-md">
+        <button onClick={onClose} className="absolute top-4 right-4">
+          <X size={20} />
+        </button>
+
+        <CardHeader className="text-center">
+          <div className="flex justify-center mb-4">
+            <Lock className="h-12 w-12 text-primary" />
+          </div>
+          <CardTitle className="text-2xl">Admin Login</CardTitle>
+          <p className="text-muted-foreground">Enter admin credentials to continue</p>
+        </CardHeader>
+
+        <CardContent>
+          <form onSubmit={handleAdminLogin} className="space-y-4">
             <Input
-              id="email"
               type="email"
-              placeholder="admin@mindcare.edu"
+              placeholder="Admin Email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="border-2 border-orange-200 focus:border-green-400"
             />
-          </div>
+            
+            <Input
+              type="password"
+              placeholder="Admin Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
 
-          <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
-            <div className="relative">
-              <Input
-                id="password"
-                type={showPassword ? "text" : "password"}
-                placeholder="Enter your password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                className="border-2 border-orange-200 focus:border-green-400 pr-10"
-              />
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                onClick={() => setShowPassword(!showPassword)}
-              >
-                {showPassword ? (
-                  <EyeOff className="h-4 w-4 text-gray-400" />
-                ) : (
-                  <Eye className="h-4 w-4 text-gray-400" />
-                )}
-              </Button>
-            </div>
-          </div>
+            {error && (
+              <div className="bg-red-50 border border-red-200 text-red-600 p-3 rounded-md text-sm">
+                {error}
+              </div>
+            )}
 
-          {error && <div className="text-sm text-red-600 bg-red-50 p-3 rounded-md border border-red-200">{error}</div>}
-
-          <div className="flex gap-3 pt-4">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onClose}
-              className="flex-1 bg-transparent"
-              disabled={isLoading}
+            <Button 
+              type="submit" 
+              className="w-full" 
+              disabled={loading}
             >
-              Cancel
+              {loading ? "Signing in..." : "Sign in as Admin"}
             </Button>
-            <Button
-              type="submit"
-              className="flex-1 bg-gradient-to-r from-orange-500 to-green-500 hover:from-orange-600 hover:to-green-600"
-              disabled={isLoading}
-            >
-              {isLoading ? "Authenticating..." : "Login"}
-            </Button>
-          </div>
-        </form>
+          </form>
 
-        <div className="text-xs text-gray-500 mt-4 p-3 bg-gray-50 rounded-md">
-          <p className="font-medium mb-1">Demo Credentials:</p>
-          <p>Email: admin@mindcare.edu</p>
-          <p>Password: MindCare2024!</p>
-        </div>
-      </DialogContent>
-    </Dialog>
+          <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+            <p className="text-sm text-yellow-700">
+              <strong>Note:</strong> Only users with admin privileges can access this section.
+            </p>
+          </div>
+        </CardContent>
+      </div>
+    </div>
   )
 }

@@ -23,7 +23,6 @@ interface Student {
 }
 
 interface AppState {
-  // Dashboard metrics
   totalUsers: number
   registeredUsers: number
   sessionsBooked: number
@@ -33,18 +32,10 @@ interface AppState {
   assessmentsCompleted: number
   chatbotUsage: number
   crisisHelplineClicks: number
-
-  // Students data
   students: Student[]
-
-  // Admin
   isAdminAuthenticated: boolean
-
-  // Firebase User (for login/signup)
   user: User | null
   setUser: (user: User | null) => void
-
-  // Actions
   incrementBookings: () => void
   incrementResourceViews: () => void
   incrementForumPosts: () => void
@@ -68,7 +59,6 @@ const mockStudents: Student[] = []
 export const useAppStore = create<AppState>()(
   persist(
     (set, get) => ({
-      // Initial state
       totalUsers: 0,
       registeredUsers: 0,
       sessionsBooked: 0,
@@ -82,7 +72,6 @@ export const useAppStore = create<AppState>()(
       user: null,
       students: mockStudents,
 
-      // User actions
       setUser: (user) => set({ user }),
 
       incrementBookings: () =>
@@ -131,7 +120,7 @@ export const useAppStore = create<AppState>()(
 
       authenticateAdmin: (email, password) => {
         const validCredentials = [
-          { email: "ramagarwal99001@gmail.com", password: "29112004" }
+          { email: "ramagrawal99001@gmail.com", password: "29112004" } // fixed spelling
         ]
 
         const isValid = validCredentials.some(
@@ -185,7 +174,7 @@ function calculateRiskLevel(
   return "low"
 }
 
-// Listen Firebase Auth
+// Listen to Firebase Auth
 onAuthStateChanged(auth, (user) => {
   useAppStore.getState().setUser(user)
 })
