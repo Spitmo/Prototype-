@@ -3,7 +3,7 @@
 import { useState } from "react"
 import Navigation from "@/components/navigation"
 import HeroSection from "@/components/hero-section"
-import AIChatInterface from "@/components/ai-chat-interface"
+// import AIChatInterface from "@/components/ai-chat-interface"
 import PeerSupportForum from "@/components/peer-support-forum"
 import EmergencyModal from "@/components/emergency-modal"
 import BackgroundAnimation from "@/components/background-animation"
@@ -11,6 +11,8 @@ import AdminLoginModal from "@/components/admin-login-modal"
 import { useAppStore } from "@/lib/store"
 import { Button } from "@/components/ui/button"
 import { Shield, LogOut } from "lucide-react"
+import FeaturesGrid from "@/components/features-grid"
+import ChatbotPopup from "@/components/chat-popup"
 
 
 export default function Home() {
@@ -27,6 +29,7 @@ export default function Home() {
       <BackgroundAnimation />
       <Navigation />
 
+      {/* Admin Login / Logout Button */}
       <div className="fixed top-4 right-4 z-50">
         {isAdminAuthenticated ? (
           <Button
@@ -51,11 +54,19 @@ export default function Home() {
         )}
       </div>
 
+      {/* Main Content */}
       <div className="container mx-auto px-4 py-8 space-y-16">
         <HeroSection />
+
+        {/* 👇 Features Grid */}
+        <FeaturesGrid />
+ 
+        {/* Chat Section */}
         <section id="chat">
-          <AIChatInterface />
-        </section>
+          {/* <ai-chat-interface/> */}
+        </section> 
+
+        {/* Forum Section */}
         <section id="forum">
           <PeerSupportForum />
         </section>
@@ -63,6 +74,7 @@ export default function Home() {
 
       <EmergencyModal />
       <AdminLoginModal isOpen={showAdminLogin} onClose={() => setShowAdminLogin(false)} />
+        <ChatbotPopup />
     </main>
   )
 }

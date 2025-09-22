@@ -1,22 +1,11 @@
 "use client"
 
-import { useRouter, usePathname } from "next/navigation"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { MessageCircle, Calendar } from "lucide-react"
 
 export default function HeroSection() {
   const router = useRouter()
-  const pathname = usePathname()
-
-  const goToChat = () => {
-    if (pathname === "/") {
-      // Agar same page par ho to scroll kare
-      document.getElementById("chat")?.scrollIntoView({ behavior: "smooth" })
-    } else {
-      // Agar dusre page par ho to normal navigation kare
-      router.push("/#chat")
-    }
-  }
 
   return (
     <section id="home" className="text-center py-20">
@@ -27,7 +16,7 @@ export default function HeroSection() {
           </div>
           <div className="relative">
             <h1 className="h-33 text-4xl md:text-6xl font-bold text-balance bg-gradient-to-b from-gray-800 via-black to-gray-600 bg-clip-text text-transparent">
-              MindCare - Every thought matters here
+              MindCare - Every Thought Matters Here
             </h1>
           </div>
         </div>
@@ -39,7 +28,7 @@ export default function HeroSection() {
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           {/* AI Chat Button */}
           <Button
-            onClick={goToChat}
+            onClick={() => router.push("/chat")}
             size="lg"
             style={{
               backgroundColor: "#059669",

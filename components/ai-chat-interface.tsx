@@ -33,132 +33,64 @@ export default function AIChatInterface() {
   const recognitionRef = useRef<any>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
-  // Auto scroll
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [messages])
 
-  // Track Firebase user
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (user) => setCurrentUser(user))
     return () => unsub()
   }, [])
 
-  // Guest mode storage
+  // 🎤 Speech Recognition Setup
   useEffect(() => {
-    if (!currentUser) {
-      localStorage.setItem("guestChat", JSON.stringify(messages))
-    }
-  }, [messages, currentUser])
+    if (typeof window !== "undefined") {
+      const SpeechRecognition =
+        (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+      if (SpeechRecognition) {
+        const recognition = new SpeechRecognition()
+        recognition.lang = "en-US"
+        recognition.interimResults = false
+        recognition.continuous = false
 
-  useEffect(() => {
-    if (!currentUser) {
-      const saved = localStorage.getItem("guestChat")
-      if (saved) setMessages(JSON.parse(saved))
-    }
-  }, [currentUser])
+        recognition.onresult = (event: any) => {
+          const transcript = event.results[0][0].transcript
+          setInputValue((prev) => prev + " " + transcript)
+        }
 
-  // Show login modal after 5 msgs
-  useEffect(() => {
-    if (messages.length === 5 && !currentUser) {
-      setShowAuth(true)
-    }
-  }, [messages, currentUser])
-
-  // 🎤 Speech Recognition
-  const handleStartListening = () => {
-    if (typeof window === "undefined") return
-    const SpeechRecognition =
-      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
-    if (!SpeechRecognition) {
-      alert("Your browser does not support Speech Recognition")
-      return
-    }
-
-    if (!recognitionRef.current) {
-      recognitionRef.current = new SpeechRecognition()
-      recognitionRef.current.continuous = false
-      recognitionRef.current.interimResults = false
-      recognitionRef.current.lang = "en-US"
-
-      recognitionRef.current.onresult = (event: any) => {
-        const transcript = event.results[0][0].transcript
-        setInputValue(transcript)
-      }
-
-      recognitionRef.current.onend = () => {
-        setListening(false)
+        recognition.onend = () => setListening(false)
+        recognitionRef.current = recognition
       }
     }
+  }, [])
 
-    setListening(true)
-    recognitionRef.current.start()
-  }
-
-  // ✉️ Send Message
   const handleSendMessage = async () => {
     if (!inputValue.trim()) return
-
     const userMessage: Message = {
       id: Date.now().toString(),
       content: inputValue,
       isBot: false,
       timestamp: new Date(),
     }
-
     setMessages((prev) => [...prev, userMessage])
     setInputValue("")
     setIsTyping(true)
 
     try {
-      const chatMessages = [
-        ...messages.map((m) => ({
-          role: m.isBot ? "assistant" : "user",
-          content: m.content,
-        })),
-        { role: "user", content: inputValue },
-      ]
-
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: chatMessages }),
+        body: JSON.stringify({ messages: [{ role: "user", content: inputValue }] }),
       })
-
       const data = await res.json()
-
       const botMessage: Message = {
         id: (Date.now() + 1).toString(),
         content: data.text,
         isBot: true,
         timestamp: new Date(),
       }
-
       setMessages((prev) => [...prev, botMessage])
-
-      if (currentUser) {
-        await fetch("/api/chat/send", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            userId: currentUser.uid,
-            text: userMessage.content,
-            isBot: false,
-            timestamp: userMessage.timestamp.toISOString(),
-          }),
-        })
-        await fetch("/api/chat/send", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            userId: currentUser.uid,
-            text: botMessage.content,
-            isBot: true,
-            timestamp: botMessage.timestamp.toISOString(),
-          }),
-        })
-      }
-    } catch (error) {
+    } catch {
       setMessages((prev) => [
         ...prev,
         { id: "error", content: "⚠️ Error fetching response.", isBot: true, timestamp: new Date() },
@@ -168,21 +100,31 @@ export default function AIChatInterface() {
     }
   }
 
+  const toggleListening = () => {
+    if (listening) {
+      recognitionRef.current?.stop()
+      setListening(false)
+    } else {
+      recognitionRef.current?.start()
+      setListening(true)
+    }
+  }
+
   return (
-    <section id="chat" className="py-10">
+    <section className="py-10">
       <Card className="max-w-3xl mx-auto shadow-lg rounded-2xl overflow-hidden">
         {/* Header */}
-        <CardHeader className="text-center bg-gradient-to-r from-green-300 to-emerald-600 h-24 flex items-center justify-center rounded-3xl" >
+        <CardHeader className="text-center bg-gradient-to-r from-green-400 to-emerald-600 h-24 flex items-center justify-center rounded-xl">
           <CardTitle className="text-3xl font-bold text-white flex items-center gap-2">
             <Bot className="w-7 h-7" /> AI Health Assistant
           </CardTitle>
         </CardHeader>
 
+        {/* Content */}
         <CardContent className="bg-gray-50">
-          {/* Login Modal */}
           <AuthBanner show={showAuth} onClose={() => setShowAuth(false)} />
 
-          {/* Chat Box */}
+          {/* Chat messages */}
           <div className="h-96 overflow-y-auto p-4 space-y-4">
             {messages.map((m) => (
               <div key={m.id} className={`flex ${m.isBot ? "justify-start" : "justify-end"}`}>
@@ -196,9 +138,7 @@ export default function AIChatInterface() {
                   </div>
                   <div
                     className={`p-3 rounded-2xl shadow ${
-                      m.isBot
-                        ? "bg-white border border-gray-200 text-gray-800"
-                        : "bg-blue-500 text-white"
+                      m.isBot ? "bg-white border border-gray-200 text-gray-800" : "bg-blue-500 text-white"
                     }`}
                   >
                     {m.content}
@@ -210,24 +150,26 @@ export default function AIChatInterface() {
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Input Box */}
+          {/* Input */}
           <div className="flex gap-2 mt-3">
             <Input
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
-              placeholder="Type a message or use mic..."
+              placeholder="Type a message..."
               onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
               className="flex-1"
             />
+            <Button
+              type="button"
+              onClick={toggleListening}
+              className={`${
+                listening ? "bg-red-500 hover:bg-red-600" : "bg-gray-200 hover:bg-gray-300"
+              }`}
+            >
+              <Mic className={`w-5 h-5 ${listening ? "text-white" : "text-black"}`} />
+            </Button>
             <Button onClick={handleSendMessage} className="bg-green-600 hover:bg-green-700">
               <Send className="w-5 h-5" />
-            </Button>
-            <Button
-              variant={listening ? "destructive" : "outline"}
-              onClick={handleStartListening}
-              title="Speak"
-            >
-              <Mic className="w-5 h-5" />
             </Button>
           </div>
         </CardContent>

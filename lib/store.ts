@@ -131,9 +131,7 @@ export const useAppStore = create<AppState>()(
 
       authenticateAdmin: (email, password) => {
         const validCredentials = [
-          { email: "admin@mindcare.edu", password: "MindCare2024!" },
-          { email: "authority@college.edu", password: "Authority@123" },
-          { email: "counselor@mindcare.edu", password: "Counselor#456" },
+          { email: "ramagarwal99001@gmail.com", password: "29112004" }
         ]
 
         const isValid = validCredentials.some(
