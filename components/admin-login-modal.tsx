@@ -13,7 +13,7 @@ import { db } from "@/lib/firebase"
 interface AdminLoginModalProps {
   isOpen: boolean
   onClose: () => void
-  onSuccess?: () => void   // ✅ make it optional
+  onSuccess?: () => void   // ✅ optional
 }
 
 export default function AdminLoginModal({ isOpen, onClose, onSuccess }: AdminLoginModalProps) {
@@ -43,20 +43,16 @@ export default function AdminLoginModal({ isOpen, onClose, onSuccess }: AdminLog
     setError("")
 
     try {
-      // Sign in user
       const userCredential = await signInWithEmailAndPassword(auth, email, password)
-      
-      // Check if user is admin
       const isAdmin = await checkAdminAccess(userCredential.user.uid)
-      
+
       if (!isAdmin) {
         setError("Access denied. Admin privileges required.")
         await auth.signOut()
         return
       }
 
-      // ✅ safe call
-      if (onSuccess) onSuccess()
+      if (onSuccess) onSuccess()   // ✅ safe call
       onClose()
 
     } catch (err: any) {
@@ -92,7 +88,7 @@ export default function AdminLoginModal({ isOpen, onClose, onSuccess }: AdminLog
               onChange={(e) => setEmail(e.target.value)}
               required
             />
-            
+
             <Input
               type="password"
               placeholder="Admin Password"
@@ -107,11 +103,7 @@ export default function AdminLoginModal({ isOpen, onClose, onSuccess }: AdminLog
               </div>
             )}
 
-            <Button 
-              type="submit" 
-              className="w-full" 
-              disabled={loading}
-            >
+            <Button type="submit" className="w-full" disabled={loading}>
               {loading ? "Signing in..." : "Sign in as Admin"}
             </Button>
           </form>
@@ -126,3 +118,4 @@ export default function AdminLoginModal({ isOpen, onClose, onSuccess }: AdminLog
     </div>
   )
 }
+

@@ -2,6 +2,8 @@
 
 import { create } from "zustand"
 import { persist } from "zustand/middleware"
+import { db } from "@/lib/firebase"
+import { collection, addDoc, updateDoc, doc, onSnapshot } from "firebase/firestore"
 
 interface Student {
   id: string
@@ -10,6 +12,7 @@ interface Student {
   age: number
   year: string
   department: string
+  profession?: string
   phq9Score?: number
   gad7Score?: number
   ghqScore?: number
@@ -23,7 +26,7 @@ interface Student {
 interface AppState {
   // Dashboard metrics
   totalUsers: number
-  registeredUsers: number // Added registered users tracking
+  registeredUsers: number
   sessionsBooked: number
   resourceViews: number
   forumPosts: number
@@ -43,24 +46,23 @@ interface AppState {
   incrementForumPosts: () => void
   incrementEmergencyContacts: () => void
   incrementAssessments: () => void
-  incrementRegisteredUsers: () => void // Added action for registered users
-  addStudent: (student: Student) => void
-  updateStudentAssessment: (id: string, scores: { phq9?: number; gad7?: number; ghqScore?: number }) => void
+  incrementRegisteredUsers: () => void
+  addStudent: (student: Student) => Promise<void>
+  updateStudentAssessment: (id: string, scores: { phq9?: number; gad7?: number; ghqScore?: number }) => Promise<void>
+  completeAssessment: (student: Student) => Promise<void>  // ✅ assessment complete karega
   resetMetrics: () => void
   authenticateAdmin: (email: string, password: string) => boolean
   logoutAdmin: () => void
   incrementChatbotUsage: () => void
   incrementCrisisHelplineClicks: () => void
+  listenToStudents: () => () => void
 }
-
-const mockStudents: Student[] = []
 
 export const useAppStore = create<AppState>()(
   persist(
     (set, get) => ({
-      // Initial metrics set to zero
       totalUsers: 0,
-      registeredUsers: 0, // Added registered users counter
+      registeredUsers: 0,
       sessionsBooked: 0,
       resourceViews: 0,
       forumPosts: 0,
@@ -69,72 +71,66 @@ export const useAppStore = create<AppState>()(
       isAdminAuthenticated: false,
       chatbotUsage: 0,
       crisisHelplineClicks: 0,
+      students: [],
 
-      students: mockStudents,
+      incrementBookings: () => set((s) => ({ sessionsBooked: s.sessionsBooked + 1 })),
+      incrementResourceViews: () => set((s) => ({ resourceViews: s.resourceViews + 1 })),
+      incrementForumPosts: () => set((s) => ({ forumPosts: s.forumPosts + 1 })),
+      incrementEmergencyContacts: () => set((s) => ({ emergencyContacts: s.emergencyContacts + 1 })),
+      incrementAssessments: () => set((s) => ({ assessmentsCompleted: s.assessmentsCompleted + 1 })),
+      incrementRegisteredUsers: () => set((s) => ({ registeredUsers: s.registeredUsers + 1 })),
 
-      incrementBookings: () =>
-        set((state) => ({
-          sessionsBooked: state.sessionsBooked + 1,
-        })),
+      addStudent: async (student) => {
+        try {
+          await addDoc(collection(db, "students"), student)
+        } catch (err) {
+          console.error("Error adding student:", err)
+        }
+      },
 
-      incrementResourceViews: () =>
-        set((state) => ({
-          resourceViews: state.resourceViews + 1,
-        })),
+      updateStudentAssessment: async (id, scores) => {
+        try {
+          await updateDoc(doc(db, "students", id), {
+            ...scores,
+            lastAssessment: new Date(),
+            riskLevel: calculateRiskLevel(scores.phq9 || 0, scores.gad7 || 0, scores.ghqScore || 0),
+          })
+        } catch (err) {
+          console.error("Error updating assessment:", err)
+        }
+      },
 
-      incrementForumPosts: () =>
-        set((state) => ({
-          forumPosts: state.forumPosts + 1,
-        })),
+      // ✅ Jab bhi assessment complete ho → student ko Firestore + local store dono me save karo
+      completeAssessment: async (student) => {
+        try {
+          await addDoc(collection(db, "students"), {
+            ...student,
+            lastAssessment: new Date(),
+            riskLevel: calculateRiskLevel(student.phq9Score || 0, student.gad7Score || 0, student.ghqScore || 0),
+          })
 
-      incrementEmergencyContacts: () =>
-        set((state) => ({
-          emergencyContacts: state.emergencyContacts + 1,
-        })),
+          set((state) => ({
+            students: [...state.students, student],
+            assessmentsCompleted: state.assessmentsCompleted + 1,
+            totalUsers: state.totalUsers + 1,
+            registeredUsers: state.registeredUsers + 1,
+          }))
+        } catch (err) {
+          console.error("Error completing assessment:", err)
+        }
+      },
 
-      incrementAssessments: () =>
-        set((state) => ({
-          assessmentsCompleted: state.assessmentsCompleted + 1,
-        })),
+      listenToStudents: () => {
+        const unsub = onSnapshot(collection(db, "students"), (snapshot) => {
+          const students = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as Student[]
+          set({ students, totalUsers: students.length, registeredUsers: students.length })
+        })
+        return unsub
+      },
 
-      incrementRegisteredUsers: () =>
-        // Added increment function for registered users
-        set((state) => ({
-          registeredUsers: state.registeredUsers + 1,
-        })),
-
-      addStudent: (student) =>
-        set((state) => ({
-          students: [...state.students, student],
-          totalUsers: state.totalUsers + 1,
-          registeredUsers: state.registeredUsers + 1, // Increment registered users when adding student
-        })),
-
-      updateStudentAssessment: (id, scores) =>
-        set((state) => ({
-          students: state.students.map((student) =>
-            student.id === id
-              ? {
-                  ...student,
-                  ...scores,
-                  lastAssessment: new Date(),
-                  riskLevel: calculateRiskLevel(scores.phq9 || 0, scores.gad7 || 0, scores.ghqScore || 0),
-                }
-              : student,
-          ),
-          assessmentsCompleted: state.assessmentsCompleted + 1,
-        })),
-
-      authenticateAdmin: (email: string, password: string) => {
-        // Admin credentials - in production, this should be more secure
-        const validCredentials = [
-          { email: "ramagrawal99001@gmail.com", password: "29112004" }
-          
-        ]
-
-        const isValid = validCredentials.some((cred) => cred.email === email && cred.password === password)
-
-        if (isValid) {
+      authenticateAdmin: (email, password) => {
+        const valid = email === "ramagrawal99001@gmail.com" && password === "29112004"
+        if (valid) {
           set({ isAdminAuthenticated: true })
           return true
         }
@@ -143,20 +139,13 @@ export const useAppStore = create<AppState>()(
 
       logoutAdmin: () => set({ isAdminAuthenticated: false }),
 
-      incrementChatbotUsage: () =>
-        set((state) => ({
-          chatbotUsage: state.chatbotUsage + 1,
-        })),
-
-      incrementCrisisHelplineClicks: () =>
-        set((state) => ({
-          crisisHelplineClicks: state.crisisHelplineClicks + 1,
-        })),
+      incrementChatbotUsage: () => set((s) => ({ chatbotUsage: s.chatbotUsage + 1 })),
+      incrementCrisisHelplineClicks: () => set((s) => ({ crisisHelplineClicks: s.crisisHelplineClicks + 1 })),
 
       resetMetrics: () =>
         set(() => ({
           totalUsers: 0,
-          registeredUsers: 0, // Reset registered users to zero
+          registeredUsers: 0,
           sessionsBooked: 0,
           resourceViews: 0,
           forumPosts: 0,
@@ -167,22 +156,7 @@ export const useAppStore = create<AppState>()(
           students: [],
         })),
     }),
-    {
-      name: "mindcare-storage",
-      onRehydrateStorage: () => (state) => {
-        if (state) {
-          state.totalUsers = 0
-          state.registeredUsers = 0 // Reset registered users on app load
-          state.sessionsBooked = 0
-          state.resourceViews = 0
-          state.forumPosts = 0
-          state.emergencyContacts = 0
-          state.assessmentsCompleted = 0
-          state.chatbotUsage = 0
-          state.crisisHelplineClicks = 0
-        }
-      },
-    },
+    { name: "mindcare-storage" },
   ),
 )
 
