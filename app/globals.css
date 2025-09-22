@@ -176,3 +176,6 @@ button.emergency-button {
 button.emergency-button:hover {
   background-color: #b91c1c !important;
 }
+html {
+  scroll-behavior: smooth;
+}

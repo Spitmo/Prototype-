@@ -1,9 +1,11 @@
-// app/lib/useAuth.ts
-import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, User } from "firebase/auth"
-import { app } from "./firebase"
-
-// Auth instance
-const auth = getAuth(app)
+import { 
+  signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword, 
+  signOut, 
+  onAuthStateChanged, 
+  User 
+} from "firebase/auth"
+import { auth } from "./firebase"
 
 // 🔹 Login
 export async function login(email: string, password: string) {

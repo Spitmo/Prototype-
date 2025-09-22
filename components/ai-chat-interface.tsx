@@ -6,7 +6,7 @@ import { onAuthStateChanged, User } from "firebase/auth"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Send, Bot, User as UserIcon } from "lucide-react"
+import { Send, Bot, User as UserIcon, Mic } from "lucide-react"
 import AuthBanner from "./AuthBanner"
 
 interface Message {
@@ -20,7 +20,7 @@ export default function AIChatInterface() {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "1",
-      content: "Hi! I'm your friendly AI buddy 😊 What's on your mind today?",
+      content: "👋 Hi! I'm your AI Health Assistant. How are you feeling today?",
       isBot: true,
       timestamp: new Date(),
     },
@@ -28,9 +28,12 @@ export default function AIChatInterface() {
   const [inputValue, setInputValue] = useState("")
   const [isTyping, setIsTyping] = useState(false)
   const [currentUser, setCurrentUser] = useState<User | null>(null)
+  const [showAuth, setShowAuth] = useState(false)
+  const [listening, setListening] = useState(false)
+  const recognitionRef = useRef<any>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
-  // Scroll to bottom
+  // Auto scroll
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [messages])
@@ -41,7 +44,7 @@ export default function AIChatInterface() {
     return () => unsub()
   }, [])
 
-  // Guest mode: store in localStorage
+  // Guest mode storage
   useEffect(() => {
     if (!currentUser) {
       localStorage.setItem("guestChat", JSON.stringify(messages))
@@ -55,46 +58,44 @@ export default function AIChatInterface() {
     }
   }, [currentUser])
 
+  // Show login modal after 5 msgs
   useEffect(() => {
-    if (currentUser) {
-      // Fetch chat history from BigQuery via your API
-      fetch(`/api/chat/history?userId=${currentUser.uid}`)
-        .then((res) => res.json())
-        .then((data) => {
-          // Convert timestamp to Date if needed
-          const loaded = data.map((msg: any) => ({
-            ...msg,
-            timestamp: new Date(msg.timestamp),
-            isBot: msg.isBot ?? false, // fallback if not present
-            id: msg.id?.toString() ?? Date.now().toString(),
-          }))
-          setMessages(
-            loaded.length > 0
-              ? loaded
-              : [
-                  {
-                    id: "1",
-                    content: "Hi! I'm your friendly AI buddy 😊 What's on your mind today?",
-                    isBot: true,
-                    timestamp: new Date(),
-                  },
-                ]
-          )
-        })
-        .catch(() => {
-          // fallback to default message if error
-          setMessages([
-            {
-              id: "1",
-              content: "Hi! I'm your friendly AI buddy 😊 What's on your mind today?",
-              isBot: true,
-              timestamp: new Date(),
-            },
-          ])
-        })
+    if (messages.length === 5 && !currentUser) {
+      setShowAuth(true)
     }
-  }, [currentUser])
+  }, [messages, currentUser])
 
+  // 🎤 Speech Recognition
+  const handleStartListening = () => {
+    if (typeof window === "undefined") return
+    const SpeechRecognition =
+      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+    if (!SpeechRecognition) {
+      alert("Your browser does not support Speech Recognition")
+      return
+    }
+
+    if (!recognitionRef.current) {
+      recognitionRef.current = new SpeechRecognition()
+      recognitionRef.current.continuous = false
+      recognitionRef.current.interimResults = false
+      recognitionRef.current.lang = "en-US"
+
+      recognitionRef.current.onresult = (event: any) => {
+        const transcript = event.results[0][0].transcript
+        setInputValue(transcript)
+      }
+
+      recognitionRef.current.onend = () => {
+        setListening(false)
+      }
+    }
+
+    setListening(true)
+    recognitionRef.current.start()
+  }
+
+  // ✉️ Send Message
   const handleSendMessage = async () => {
     if (!inputValue.trim()) return
 
@@ -136,7 +137,6 @@ export default function AIChatInterface() {
       setMessages((prev) => [...prev, botMessage])
 
       if (currentUser) {
-        // Save user message
         await fetch("/api/chat/send", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -147,7 +147,6 @@ export default function AIChatInterface() {
             timestamp: userMessage.timestamp.toISOString(),
           }),
         })
-        // Save bot message
         await fetch("/api/chat/send", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -162,7 +161,7 @@ export default function AIChatInterface() {
     } catch (error) {
       setMessages((prev) => [
         ...prev,
-        { id: "error", content: "Error fetching response.", isBot: true, timestamp: new Date() },
+        { id: "error", content: "⚠️ Error fetching response.", isBot: true, timestamp: new Date() },
       ])
     } finally {
       setIsTyping(false)
@@ -170,24 +169,36 @@ export default function AIChatInterface() {
   }
 
   return (
-    <section id="chat" className="py-8">
-      <Card className="max-w-3xl mx-auto">
-        <CardHeader className="text-center bg-gradient-to-r from-orange-300 to-green-300">
-          <CardTitle className="text-2xl">AI Mental Health Assistant</CardTitle>
+    <section id="chat" className="py-10">
+      <Card className="max-w-3xl mx-auto shadow-lg rounded-2xl overflow-hidden">
+        {/* Header */}
+        <CardHeader className="text-center bg-gradient-to-r from-green-300 to-emerald-600 h-24 flex items-center justify-center rounded-3xl" >
+          <CardTitle className="text-3xl font-bold text-white flex items-center gap-2">
+            <Bot className="w-7 h-7" /> AI Health Assistant
+          </CardTitle>
         </CardHeader>
-        <CardContent>
-          <AuthBanner />
 
-          <div className="h-80 overflow-y-auto p-4 space-y-3">
+        <CardContent className="bg-gray-50">
+          {/* Login Modal */}
+          <AuthBanner show={showAuth} onClose={() => setShowAuth(false)} />
+
+          {/* Chat Box */}
+          <div className="h-96 overflow-y-auto p-4 space-y-4">
             {messages.map((m) => (
               <div key={m.id} className={`flex ${m.isBot ? "justify-start" : "justify-end"}`}>
-                <div className="flex items-center space-x-2 max-w-md">
-                  <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
-                    {m.isBot ? <Bot className="w-4 h-4" /> : <UserIcon className="w-4 h-4" />}
+                <div className="flex items-start gap-2 max-w-md">
+                  <div
+                    className={`w-9 h-9 rounded-full flex items-center justify-center shadow ${
+                      m.isBot ? "bg-green-500 text-white" : "bg-blue-500 text-white"
+                    }`}
+                  >
+                    {m.isBot ? <Bot className="w-5 h-5" /> : <UserIcon className="w-5 h-5" />}
                   </div>
                   <div
-                    className={`p-2 rounded-lg ${
-                      m.isBot ? "bg-gray-100 text-black" : "bg-blue-500 text-white"
+                    className={`p-3 rounded-2xl shadow ${
+                      m.isBot
+                        ? "bg-white border border-gray-200 text-gray-800"
+                        : "bg-blue-500 text-white"
                     }`}
                   >
                     {m.content}
@@ -195,19 +206,28 @@ export default function AIChatInterface() {
                 </div>
               </div>
             ))}
-            {isTyping && <p className="text-sm text-gray-400">Bot is typing...</p>}
+            {isTyping && <p className="text-sm text-gray-400 italic">Bot is typing...</p>}
             <div ref={messagesEndRef} />
           </div>
 
-          <div className="flex space-x-2 mt-2">
+          {/* Input Box */}
+          <div className="flex gap-2 mt-3">
             <Input
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
-              placeholder="Type a message..."
+              placeholder="Type a message or use mic..."
               onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
+              className="flex-1"
             />
-            <Button onClick={handleSendMessage}>
-              <Send className="w-4 h-4" />
+            <Button onClick={handleSendMessage} className="bg-green-600 hover:bg-green-700">
+              <Send className="w-5 h-5" />
+            </Button>
+            <Button
+              variant={listening ? "destructive" : "outline"}
+              onClick={handleStartListening}
+              title="Speak"
+            >
+              <Mic className="w-5 h-5" />
             </Button>
           </div>
         </CardContent>

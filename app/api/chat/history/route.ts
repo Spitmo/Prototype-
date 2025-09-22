@@ -7,4 +7,3 @@ export async function GET(req: NextRequest) {
   const messages = await getMessages(userId)
   return new Response(JSON.stringify(messages), { headers: { "Content-Type": "application/json" } })
 }
-
