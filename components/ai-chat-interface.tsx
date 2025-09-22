@@ -4,10 +4,9 @@ import { useState, useRef, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Send, Bot, User as UserIcon, Mic, X } from "lucide-react"
+import { Send, Bot, User as UserIcon, Mic } from "lucide-react"
 import { useSpeechToText } from "@/hooks/useSpeechToText"
-import AuthForm from "@/components/authform"
-import { onAuthStateChanged, signOut, User as FirebaseUser } from "firebase/auth"
+import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth"
 import { db, auth } from "@/lib/firebase"
 import {
   collection,
@@ -38,7 +37,6 @@ export default function AIChatInterface() {
   const [inputValue, setInputValue] = useState("")
   const [isTyping, setIsTyping] = useState(false)
   const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(null)
-  const [showAuth, setShowAuth] = useState(false)
   const [guestUserId, setGuestUserId] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement | null>(null)
 
@@ -69,7 +67,6 @@ export default function AIChatInterface() {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
         setCurrentUser(user)
-        setShowAuth(false)
         loadMessages(user.uid)
       } else {
         const guestId = getOrCreateGuestId()
@@ -83,7 +80,11 @@ export default function AIChatInterface() {
 
   // Load messages from Firestore
   const loadMessages = (userId: string) => {
-    const q = query(collection(db, "messages"), where("userId", "==", userId), orderBy("createdAt", "asc"))
+    const q = query(
+      collection(db, "messages"),
+      where("userId", "==", userId),
+      orderBy("createdAt", "asc")
+    )
     return onSnapshot(q, (snap) => {
       const loaded = snap.docs.map((doc) => ({
         id: doc.id,
@@ -91,11 +92,12 @@ export default function AIChatInterface() {
       })) as Message[]
 
       setMessages((prev) => {
-        const init = prev.find((m) => m.id === "init") || {
-          id: "init",
-          content: "👋 Hi! I'm your AI Health Assistant. How are you feeling today?",
-          isBot: true,
-        }
+        const init =
+          prev.find((m) => m.id === "init") || {
+            id: "init",
+            content: "👋 Hi! I'm your AI Health Assistant. How are you feeling today?",
+            isBot: true,
+          }
         return [init, ...loaded]
       })
     })
@@ -150,41 +152,8 @@ export default function AIChatInterface() {
     }
   }
 
-  const handleLogout = async () => {
-    await signOut(auth)
-    localStorage.removeItem("guestUserId")
-  }
-
   return (
     <section className="py-10">
-      {/* Auth Modal */}
-      {showAuth && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg shadow-lg relative w-full max-w-md">
-            <button onClick={() => setShowAuth(false)} className="absolute top-2 right-2">
-              <X size={20} />
-            </button>
-            <AuthForm onSuccess={() => setShowAuth(false)} currentGuestId={guestUserId} />
-          </div>
-        </div>
-      )}
-
-      {/* Top bar login/logout */}
-      <div className="flex justify-end max-w-4xl mx-auto mb-2">
-        {currentUser ? (
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">Logged in as {currentUser.email}</span>
-            <Button variant="outline" onClick={handleLogout}>
-              Logout
-            </Button>
-          </div>
-        ) : (
-          <Button variant="outline" onClick={() => setShowAuth(true)}>
-            Login / Sign Up
-          </Button>
-        )}
-      </div>
-
       {/* Chat card */}
       <Card className="max-w-3xl mx-auto shadow-lg rounded-2xl overflow-hidden">
         <CardHeader className="text-center bg-gradient-to-r from-green-400 to-emerald-600 h-24 flex items-center justify-center rounded-xl">
@@ -208,7 +177,9 @@ export default function AIChatInterface() {
                   </div>
                   <div
                     className={`p-3 rounded-2xl shadow ${
-                      m.isBot ? "bg-white border border-gray-200 text-gray-800" : "bg-blue-500 text-white"
+                      m.isBot
+                        ? "bg-white border border-gray-200 text-gray-800"
+                        : "bg-blue-500 text-white"
                     }`}
                   >
                     {m.content}
@@ -229,7 +200,10 @@ export default function AIChatInterface() {
               onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
               className="flex-1"
             />
-            <Button onClick={isListening ? stopListening : startListening} variant={isListening ? "destructive" : "outline"}>
+            <Button
+              onClick={isListening ? stopListening : startListening}
+              variant={isListening ? "destructive" : "outline"}
+            >
               <Mic className="w-5 h-5" />
             </Button>
             <Button onClick={handleSendMessage} className="bg-green-600 hover:bg-green-700">

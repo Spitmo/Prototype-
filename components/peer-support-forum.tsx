@@ -37,31 +37,41 @@ export default function PeerSupportForum() {
   const [posts, setPosts] = useState<ForumPost[]>([])
   const [showCreatePost, setShowCreatePost] = useState(false)
   const [newPostContent, setNewPostContent] = useState("")
-  const [loading, setLoading] = useState(false) // 🔹 prevent duplicate posts
+  const [loading, setLoading] = useState(false) // prevent duplicate posts
   const incrementForumPosts = useAppStore((state) => state.incrementForumPosts)
   const router = useRouter()
 
   // 🔹 Realtime listener
   useEffect(() => {
-    const unsub = onSnapshot(collection(db, "forumPosts"), (snapshot) => {
-      const loaded: ForumPost[] = snapshot.docs.map((docSnap) => {
-        const data = docSnap.data()
-        return {
-          id: docSnap.id,
-          author: data.author ?? "Anonymous",
-          authorId: data.authorId ?? "",
-          content: data.content ?? "",
-          timestamp: data.timestamp?.toDate().toLocaleString() ?? "",
-          tags: data.tags ?? [],
-          likes: data.likes ?? 0,
-          replies: data.replies ?? 0,
-          likedBy: data.likedBy ?? [],
-        }
-      })
-      setPosts(loaded)
-    })
+    let unsub: (() => void) | undefined
 
-    return () => unsub()
+    try {
+      unsub = onSnapshot(collection(db, "forumPosts"), (snapshot) => {
+        const loaded: ForumPost[] = snapshot.docs.map((docSnap) => {
+          const data = docSnap.data()
+          return {
+            id: docSnap.id,
+            author: data.author ?? "Anonymous",
+            authorId: data.authorId ?? "",
+            content: data.content ?? "",
+            timestamp: data.timestamp?.toDate().toLocaleString() ?? "",
+            tags: data.tags ?? [],
+            likes: data.likes ?? 0,
+            replies: data.replies ?? 0,
+            likedBy: data.likedBy ?? [],
+          }
+        })
+        setPosts(loaded)
+      })
+    } catch (error) {
+      console.error("❌ Firestore subscription error:", error)
+    }
+
+    return () => {
+      if (typeof unsub === "function") {
+        unsub()
+      }
+    }
   }, [])
 
   // 🔹 Create new post
@@ -220,5 +230,3 @@ export default function PeerSupportForum() {
     </section>
   )
 }
-
-

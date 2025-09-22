@@ -18,7 +18,7 @@ export default function LoginModal({ open, onClose }: LoginModalProps) {
   const [isLogin, setIsLogin] = useState(true)
   const [loading, setLoading] = useState(false)
 
-  if (!open) return null // agar modal close hai toh kuch bhi mat render karo
+  if (!open) return null
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -36,7 +36,7 @@ export default function LoginModal({ open, onClose }: LoginModalProps) {
         await createUserWithEmailAndPassword(auth, email, password)
         alert("✅ Account created successfully")
       }
-      onClose() // ✅ auth success ke baad modal close
+      onClose()
     } catch (error: any) {
       alert("❌ Error: " + error.message)
     } finally {
@@ -45,41 +45,45 @@ export default function LoginModal({ open, onClose }: LoginModalProps) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white p-6 rounded-lg shadow-lg w-96 relative">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 animate-fadeIn">
+      <div className="bg-white/90 p-8 rounded-2xl shadow-2xl w-96 relative border border-emerald-200">
         {/* Close button */}
         <button
           onClick={onClose}
-          className="absolute top-2 right-2 text-gray-500 hover:text-black"
+          className="absolute top-3 right-3 text-gray-500 hover:text-emerald-600 transition"
         >
           ✖
         </button>
 
-        <h2 className="text-xl font-bold mb-4 text-center">
-          {isLogin ? "Login" : "Sign Up"}
+        <h2 className="text-2xl font-bold mb-6 text-center text-emerald-600">
+          {isLogin ? "Welcome Back 👋" : "Create Account 🚀"}
         </h2>
 
-        <form onSubmit={handleSubmit} className="space-y-3">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <input
             type="email"
-            placeholder="Email"
+            placeholder="Email Address"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="border p-2 w-full rounded"
+            className="border border-gray-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-300 p-3 w-full rounded-lg outline-none transition"
           />
           <input
             type="password"
             placeholder="Password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="border p-2 w-full rounded"
+            className="border border-gray-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-300 p-3 w-full rounded-lg outline-none transition"
           />
+
           <button
             type="submit"
             disabled={loading}
-            className={`w-full px-4 py-2 rounded text-white ${
-              loading ? "bg-gray-400" : "bg-blue-600 hover:bg-blue-700"
-            }`}
+            className={`w-full px-4 py-3 rounded-lg text-white font-semibold shadow-md transition 
+              ${
+                loading
+                  ? "bg-gray-400 cursor-not-allowed"
+                  : "bg-emerald-500 hover:bg-emerald-600"
+              }`}
           >
             {loading ? "Processing..." : isLogin ? "Login" : "Sign Up"}
           </button>
@@ -87,7 +91,7 @@ export default function LoginModal({ open, onClose }: LoginModalProps) {
 
         <p
           onClick={() => setIsLogin(!isLogin)}
-          className="text-sm text-blue-600 cursor-pointer mt-4 text-center"
+          className="text-sm text-emerald-600 cursor-pointer mt-6 text-center hover:underline"
         >
           {isLogin
             ? "Need an account? Sign up"
