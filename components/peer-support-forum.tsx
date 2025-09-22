@@ -39,53 +39,50 @@ export default function PeerSupportForum() {
   const incrementForumPosts = useAppStore((state) => state.incrementForumPosts)
   const router = useRouter()
 
-  // 🔹 Realtime listener (fixed unsub crash)
+  // 🔹 Realtime listener
   useEffect(() => {
-    let unsub: (() => void) | null = null
-
-    try {
-      unsub = onSnapshot(collection(db, "forumPosts"), (snapshot) => {
-        const loaded: ForumPost[] = snapshot.docs.map((docSnap) => {
-          const data = docSnap.data()
-          return {
-            id: docSnap.id,
-            author: data.author ?? "Anonymous",
-            content: data.content ?? "",
-            timestamp: data.timestamp?.toDate().toLocaleString() ?? "",
-            tags: data.tags ?? [],
-            likes: data.likes ?? 0,
-            replies: data.replies ?? 0,
-            likedBy: data.likedBy ?? [],
-          }
-        })
-        setPosts(loaded)
+    const unsub = onSnapshot(collection(db, "forumPosts"), (snapshot) => {
+      const loaded: ForumPost[] = snapshot.docs.map((docSnap) => {
+        const data = docSnap.data()
+        return {
+          id: docSnap.id,
+          author: data.author ?? "Anonymous",
+          content: data.content ?? "",
+          timestamp: data.timestamp?.toDate().toLocaleString() ?? "",
+          tags: data.tags ?? [],
+          likes: data.likes ?? 0,
+          replies: data.replies ?? 0,
+          likedBy: data.likedBy ?? [],
+        }
       })
-    } catch (error) {
-      console.error("❌ Firestore listener error:", error)
-    }
+      setPosts(loaded)
+    })
 
-    return () => {
-      if (unsub) unsub()
-    }
+    return () => unsub()
   }, [])
 
   // 🔹 Create new post
   const handleCreatePost = async () => {
     if (!newPostContent.trim()) return
 
-    await addDoc(collection(db, "forumPosts"), {
-      author: "You (Anonymous)",
-      content: newPostContent,
-      timestamp: serverTimestamp(),
-      tags: ["New"],
-      likes: 0,
-      replies: 0,
-      likedBy: [],
-    })
+    try {
+      await addDoc(collection(db, "forumPosts"), {
+        author: "You (Anonymous)",
+        content: newPostContent,
+        timestamp: serverTimestamp(),
+        tags: ["New"],
+        likes: 0,
+        replies: 0,
+        likedBy: [],
+      })
 
-    setNewPostContent("")
-    setShowCreatePost(false)
-    incrementForumPosts()
+      setNewPostContent("")
+      setShowCreatePost(false)
+      incrementForumPosts()
+    } catch (error) {
+      console.error("❌ Error adding post:", error)
+      alert("Failed to post. Please check your Firebase setup & Firestore rules.")
+    }
   }
 
   // 🔹 Like / Unlike
@@ -117,9 +114,7 @@ export default function PeerSupportForum() {
       <div className="text-center mb-12">
         <div className="inline-block rounded-2xl p-[3px] bg-gradient-to-r from-orange-500 via-white to-green-500">
           <div className="bg-white rounded-xl px-10 py-5">
-            <h2 className="text-3xl font-bold text-black">
-              Peer Support Community
-            </h2>
+            <h2 className="text-3xl font-bold text-black">Peer Support Community</h2>
           </div>
         </div>
         <p className="text-muted-foreground text-lg mt-4">
@@ -177,18 +172,14 @@ export default function PeerSupportForum() {
                 <CardContent className="p-6">
                   <div className="flex justify-between items-start mb-4">
                     <div>
-                      <span className="font-medium text-primary">
-                        {post.author}
-                      </span>
+                      <span className="font-medium text-primary">{post.author}</span>
                       <span className="text-muted-foreground text-sm ml-2">
                         {post.timestamp}
                       </span>
                     </div>
                   </div>
 
-                  <p className="text-foreground mb-4 text-pretty">
-                    {post.content}
-                  </p>
+                  <p className="text-foreground mb-4 text-pretty">{post.content}</p>
 
                   <div className="flex flex-wrap gap-2 mb-4">
                     {post.tags.map((tag, index) => (
@@ -204,9 +195,7 @@ export default function PeerSupportForum() {
                       className="flex items-center space-x-1 hover:text-primary transition-colors"
                     >
                       <Heart
-                        className={`w-4 h-4 ${
-                          isLiked ? "fill-black text-black" : ""
-                        }`}
+                        className={`w-4 h-4 ${isLiked ? "fill-black text-black" : ""}`}
                       />
                       <span>{post.likes}</span>
                     </button>
@@ -224,3 +213,4 @@ export default function PeerSupportForum() {
     </section>
   )
 }
+
