@@ -24,6 +24,7 @@ import { useRouter } from "next/navigation"
 interface ForumPost {
   id: string
   author: string
+  authorId?: string
   content: string
   timestamp: string
   tags: string[]
@@ -36,6 +37,7 @@ export default function PeerSupportForum() {
   const [posts, setPosts] = useState<ForumPost[]>([])
   const [showCreatePost, setShowCreatePost] = useState(false)
   const [newPostContent, setNewPostContent] = useState("")
+  const [loading, setLoading] = useState(false) // 🔹 prevent duplicate posts
   const incrementForumPosts = useAppStore((state) => state.incrementForumPosts)
   const router = useRouter()
 
@@ -47,6 +49,7 @@ export default function PeerSupportForum() {
         return {
           id: docSnap.id,
           author: data.author ?? "Anonymous",
+          authorId: data.authorId ?? "",
           content: data.content ?? "",
           timestamp: data.timestamp?.toDate().toLocaleString() ?? "",
           tags: data.tags ?? [],
@@ -63,11 +66,13 @@ export default function PeerSupportForum() {
 
   // 🔹 Create new post
   const handleCreatePost = async () => {
-    if (!newPostContent.trim()) return
+    if (!newPostContent.trim() || loading) return
+    setLoading(true)
 
     try {
       await addDoc(collection(db, "forumPosts"), {
-        author: "You (Anonymous)",
+        author: "Anonymous",
+        authorId: auth.currentUser?.uid || "guest",
         content: newPostContent,
         timestamp: serverTimestamp(),
         tags: ["New"],
@@ -81,7 +86,9 @@ export default function PeerSupportForum() {
       incrementForumPosts()
     } catch (error) {
       console.error("❌ Error adding post:", error)
-      alert("Failed to post. Please check your Firebase setup & Firestore rules.")
+      alert("Failed to post. Please try again.")
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -145,9 +152,9 @@ export default function PeerSupportForum() {
                 <div className="flex space-x-2">
                   <Button
                     onClick={handleCreatePost}
-                    disabled={!newPostContent.trim()}
+                    disabled={!newPostContent.trim() || loading}
                   >
-                    Post Anonymously
+                    {loading ? "Posting..." : "Post Anonymously"}
                   </Button>
                   <Button
                     variant="outline"
@@ -213,4 +220,5 @@ export default function PeerSupportForum() {
     </section>
   )
 }
+
 
