@@ -62,20 +62,33 @@ export default function AIChatInterface() {
     if (transcript) setInputValue(transcript)
   }, [transcript])
 
-  // Auth state
+  // 🔥 Auth state with cleanup for Firestore listeners
   useEffect(() => {
+    let unsubMessages: (() => void) | null = null
+
     const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (unsubMessages) unsubMessages() // clean old snapshot listener
+
       if (user) {
         setCurrentUser(user)
+<<<<<<< Updated upstream
         loadMessages(user.uid)
+=======
+        setShowAuth(false)
+        unsubMessages = loadMessages(user.uid)
+>>>>>>> Stashed changes
       } else {
         const guestId = getOrCreateGuestId()
         setGuestUserId(guestId)
         setCurrentUser(null)
-        loadMessages(guestId)
+        unsubMessages = loadMessages(guestId)
       }
     })
-    return () => unsubscribe()
+
+    return () => {
+      unsubscribe()
+      if (unsubMessages) unsubMessages()
+    }
   }, [])
 
   // Load messages from Firestore
@@ -85,6 +98,10 @@ export default function AIChatInterface() {
       where("userId", "==", userId),
       orderBy("createdAt", "asc")
     )
+<<<<<<< Updated upstream
+=======
+
+>>>>>>> Stashed changes
     return onSnapshot(q, (snap) => {
       const loaded = snap.docs.map((doc) => ({
         id: doc.id,

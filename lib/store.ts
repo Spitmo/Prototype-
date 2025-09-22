@@ -47,7 +47,7 @@ interface AppState {
   updateStudentAssessment: (id: string, scores: { phq9?: number; gad7?: number; ghqScore?: number }) => Promise<void>
   completeAssessment: (student: Student) => Promise<void>
   resetMetrics: () => void
-  authenticateAdmin: (email: string, password: string) => boolean
+  authenticateAdmin: () => boolean
   logoutAdmin: () => void
   incrementChatbotUsage: () => void
   incrementCrisisHelplineClicks: () => void
@@ -123,13 +123,10 @@ export const useAppStore = create<AppState>()(
         return unsub
       },
 
-      authenticateAdmin: (email, password) => {
-        const valid = email === "ramagrawal99001@gmail.com" && password === "29112004"
-        if (valid) {
-          set({ isAdminAuthenticated: true })
-          return true
-        }
-        return false
+      // ✅ no hardcoded email/password
+      authenticateAdmin: () => {
+        set({ isAdminAuthenticated: true })
+        return true
       },
 
       logoutAdmin: () => set({ isAdminAuthenticated: false }),
