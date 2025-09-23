@@ -6,9 +6,10 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
-import { Calendar, Clock, User } from "lucide-react"
+import { Calendar, Clock, User, Mail } from "lucide-react"
 import { useAppStore } from "@/lib/store"
-import PhoneAuthPopup from "./PhoneAuthPopup"  // ✅ import popup
+import { auth } from "@/lib/firebase"   // ✅ import auth
+import PhoneAuthPopup from "./PhoneAuthPopup"
 
 interface Counselor {
   id: string
@@ -60,7 +61,7 @@ export default function BookingSystem() {
   const [selectedCounselor, setSelectedCounselor] = useState<Counselor | null>(null)
   const [showBookingForm, setShowBookingForm] = useState(false)
   const [formData, setFormData] = useState({ date: "", time: "", description: "" })
-  const [otpVerified, setOtpVerified] = useState(false) // ✅ new state
+  const [otpVerified, setOtpVerified] = useState(false)
   const [showOtpPopup, setShowOtpPopup] = useState(false)
 
   const incrementBookings = useAppStore((state) => state.incrementBookings)
@@ -79,7 +80,7 @@ export default function BookingSystem() {
     e.preventDefault()
     incrementBookings()
     alert(
-      `Booking confirmed with ${selectedCounselor?.name}! You will receive a confirmation email shortly. Remember, all sessions are completely confidential.`
+      `Booking confirmed with ${selectedCounselor?.name}! Confirmation email will be sent to ${auth.currentUser?.email || "your email"}`
     )
     setShowBookingForm(false)
     setSelectedCounselor(null)
@@ -92,7 +93,9 @@ export default function BookingSystem() {
     <section id="booking" className="py-16">
       <div className="text-center mb-12">
         <h2 className="text-3xl font-bold text-black">📅 Session Booking</h2>
-        <p className="text-muted-foreground text-lg">Verify phone and book confidential sessions with our counselors</p>
+        <p className="text-muted-foreground text-lg">
+          Verify phone and book confidential sessions with our counselors
+        </p>
         {!otpVerified && (
           <Button className="mt-4" onClick={() => setShowOtpPopup(true)}>
             Verify Phone to Book
@@ -122,7 +125,9 @@ export default function BookingSystem() {
                   variant={counselor.available ? "default" : "secondary"}
                   className={counselor.available ? "bg-green-100 text-green-800" : ""}
                 >
-                  {counselor.available ? "Available Today" : `Next Available: ${counselor.nextAvailable}`}
+                  {counselor.available
+                    ? "Available Today"
+                    : `Next Available: ${counselor.nextAvailable}`}
                 </Badge>
               </CardContent>
             </Card>
@@ -146,6 +151,20 @@ export default function BookingSystem() {
                 <Input value={selectedCounselor?.name || ""} readOnly className="bg-muted" />
               </div>
 
+              {/* ✅ Auto-filled email field */}
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  <Mail className="w-4 h-4 inline mr-1" />
+                  Your Email
+                </label>
+                <Input
+                  type="email"
+                  value={auth.currentUser?.email || ""}
+                  readOnly
+                  className="bg-muted"
+                />
+              </div>
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium mb-2">
@@ -156,7 +175,9 @@ export default function BookingSystem() {
                     type="date"
                     min={today}
                     value={formData.date}
-                    onChange={(e) => setFormData((prev) => ({ ...prev, date: e.target.value }))}
+                    onChange={(e) =>
+                      setFormData((prev) => ({ ...prev, date: e.target.value }))
+                    }
                     required
                   />
                 </div>
@@ -169,7 +190,9 @@ export default function BookingSystem() {
                   <select
                     className="w-full p-2 border border-border rounded-md bg-background"
                     value={formData.time}
-                    onChange={(e) => setFormData((prev) => ({ ...prev, time: e.target.value }))}
+                    onChange={(e) =>
+                      setFormData((prev) => ({ ...prev, time: e.target.value }))
+                    }
                     required
                   >
                     <option value="">Select time</option>
@@ -184,11 +207,15 @@ export default function BookingSystem() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-2">Brief Description (Optional)</label>
+                <label className="block text-sm font-medium mb-2">
+                  Brief Description (Optional)
+                </label>
                 <Textarea
                   placeholder="Share what you'd like to discuss..."
                   value={formData.description}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, description: e.target.value }))
+                  }
                   className="min-h-20"
                 />
               </div>
