@@ -5,73 +5,111 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
-import { Plus, MessageCircle, Heart } from "lucide-react"
+import { Plus, MessageCircle, Heart, Trash } from "lucide-react"
 import { useAppStore } from "@/lib/store"
-import { db, auth } from "@/lib/firebase"
+import { db } from "@/lib/firebase"
 import {
   collection,
   addDoc,
   onSnapshot,
   updateDoc,
+  deleteDoc,
   doc,
   increment,
   arrayUnion,
   arrayRemove,
   serverTimestamp,
+  query,
+  orderBy,
 } from "firebase/firestore"
-import { useRouter } from "next/navigation"
+
+// ✅ Persistent Guest ID
+function getGuestId() {
+  if (typeof window === "undefined") return "guest"
+  let id = localStorage.getItem("guestId")
+  if (!id) {
+    id = "guest_" + Math.random().toString(36).slice(2, 10)
+    localStorage.setItem("guestId", id)
+  }
+  return id
+}
+const guestId = getGuestId()
 
 interface ForumPost {
   id: string
   author: string
   authorId?: string
   content: string
-  timestamp: string
+  createdAt: string
   tags: string[]
   likes: number
   replies: number
   likedBy: string[]
 }
 
+interface Reply {
+  id: string
+  author: string
+  authorId?: string
+  content: string
+  createdAt: string
+}
+
 export default function PeerSupportForum() {
   const [posts, setPosts] = useState<ForumPost[]>([])
   const [showCreatePost, setShowCreatePost] = useState(false)
   const [newPostContent, setNewPostContent] = useState("")
-  const [loading, setLoading] = useState(false) // prevent duplicate posts
+  const [loading, setLoading] = useState(false)
+  const [replyInputs, setReplyInputs] = useState<{ [key: string]: string }>({})
+  const [replies, setReplies] = useState<{ [key: string]: Reply[] }>({})
   const incrementForumPosts = useAppStore((state) => state.incrementForumPosts)
-  const router = useRouter()
 
-  // 🔹 Realtime listener
+  // 🔹 Load posts realtime
   useEffect(() => {
-    let unsub: (() => void) | undefined
-
-    try {
-      unsub = onSnapshot(collection(db, "forumPosts"), (snapshot) => {
-        const loaded: ForumPost[] = snapshot.docs.map((docSnap) => {
-          const data = docSnap.data()
-          return {
-            id: docSnap.id,
-            author: data.author ?? "Anonymous",
-            authorId: data.authorId ?? "",
-            content: data.content ?? "",
-            timestamp: data.timestamp?.toDate().toLocaleString() ?? "",
-            tags: data.tags ?? [],
-            likes: data.likes ?? 0,
-            replies: data.replies ?? 0,
-            likedBy: data.likedBy ?? [],
-          }
-        })
-        setPosts(loaded)
+    const postsRef = query(collection(db, "forumPosts"), orderBy("createdAt", "desc"))
+    const unsubPosts = onSnapshot(postsRef, (snapshot) => {
+      const loaded: ForumPost[] = snapshot.docs.map((docSnap) => {
+        const data = docSnap.data()
+        return {
+          id: docSnap.id,
+          author: data.author ?? "Anonymous",
+          authorId: data.authorId ?? "guest",
+          content: data.content ?? "",
+          createdAt: data.createdAt?.toDate().toLocaleString() ?? "",
+          tags: data.tags ?? [],
+          likes: data.likes ?? 0,
+          replies: data.replies ?? 0,
+          likedBy: (data.likedBy ?? []) as string[],
+        }
       })
-    } catch (error) {
-      console.error("❌ Firestore subscription error:", error)
-    }
+      setPosts(loaded)
 
-    return () => {
-      if (typeof unsub === "function") {
-        unsub()
-      }
-    }
+      // Setup replies listeners
+      loaded.forEach((post) => {
+        const repliesRef = query(
+          collection(db, "forumPosts", post.id, "replies"),
+          orderBy("createdAt", "asc")
+        )
+        onSnapshot(repliesRef, (snap) => {
+          const replyList = snap.docs.map((d) => {
+            const data = d.data()
+            return {
+              id: d.id,
+              author: data.author ?? "Anonymous",
+              authorId: data.authorId ?? "guest",
+              content: data.content ?? "",
+              createdAt: data.createdAt?.toDate().toLocaleString() ?? "",
+            }
+          })
+          setReplies((prev) => ({
+            ...prev,
+            [post.id]: replyList || [],
+          }))
+        })
+      })
+    })
+
+    return () => unsubPosts()
   }, [])
 
   // 🔹 Create new post
@@ -82,9 +120,9 @@ export default function PeerSupportForum() {
     try {
       await addDoc(collection(db, "forumPosts"), {
         author: "Anonymous",
-        authorId: auth.currentUser?.uid || "guest",
+        authorId: guestId,
         content: newPostContent,
-        timestamp: serverTimestamp(),
+        createdAt: serverTimestamp(),
         tags: ["New"],
         likes: 0,
         replies: 0,
@@ -104,30 +142,61 @@ export default function PeerSupportForum() {
 
   // 🔹 Like / Unlike
   const handleToggleLike = async (post: ForumPost) => {
-    const userId = auth.currentUser?.uid
-    if (!userId) {
-      router.push("/login")
-      return
-    }
-
     const postRef = doc(db, "forumPosts", post.id)
+    const alreadyLiked = (post.likedBy || []).includes(guestId)
 
-    if (post.likedBy.includes(userId)) {
-      await updateDoc(postRef, {
-        likes: increment(-1),
-        likedBy: arrayRemove(userId),
+    // Optimistic UI update
+    setPosts((prev) =>
+      prev.map((p) =>
+        p.id === post.id
+          ? {
+              ...p,
+              likes: p.likes + (alreadyLiked ? -1 : 1),
+              likedBy: alreadyLiked
+                ? p.likedBy.filter((id) => id !== guestId)
+                : [...p.likedBy, guestId],
+            }
+          : p
+      )
+    )
+
+    await updateDoc(postRef, {
+      likes: increment(alreadyLiked ? -1 : 1),
+      likedBy: alreadyLiked ? arrayRemove(guestId) : arrayUnion(guestId),
+    })
+  }
+
+  // 🔹 Add reply
+  const handleAddReply = async (postId: string) => {
+    const replyText = replyInputs[postId]?.trim()
+    if (!replyText) return
+
+    try {
+      await addDoc(collection(db, "forumPosts", postId, "replies"), {
+        author: "Anonymous",
+        authorId: guestId,
+        content: replyText,
+        createdAt: serverTimestamp(),
       })
-    } else {
-      await updateDoc(postRef, {
-        likes: increment(1),
-        likedBy: arrayUnion(userId),
-      })
+
+      setReplyInputs((prev) => ({ ...prev, [postId]: "" }))
+    } catch (err) {
+      console.error("❌ Error adding reply:", err)
+    }
+  }
+
+  // 🔹 Delete reply
+  const handleDeleteReply = async (postId: string, replyId: string) => {
+    try {
+      await deleteDoc(doc(db, "forumPosts", postId, "replies", replyId))
+    } catch (err) {
+      console.error("❌ Error deleting reply:", err)
     }
   }
 
   return (
     <section id="peer-support" className="py-16">
-      {/* 🔹 Section Header */}
+      {/* Header */}
       <div className="text-center mb-12">
         <div className="inline-block rounded-2xl p-[3px] bg-gradient-to-r from-orange-500 via-white to-green-500">
           <div className="bg-white rounded-xl px-10 py-5">
@@ -140,7 +209,7 @@ export default function PeerSupportForum() {
       </div>
 
       <div className="max-w-4xl mx-auto">
-        {/* 🔹 Create Post */}
+        {/* Create Post */}
         <div className="mb-8 flex justify-end">
           {!showCreatePost ? (
             <Button onClick={() => setShowCreatePost(true)}>
@@ -160,16 +229,10 @@ export default function PeerSupportForum() {
                   className="min-h-24"
                 />
                 <div className="flex space-x-2">
-                  <Button
-                    onClick={handleCreatePost}
-                    disabled={!newPostContent.trim() || loading}
-                  >
+                  <Button onClick={handleCreatePost} disabled={!newPostContent.trim() || loading}>
                     {loading ? "Posting..." : "Post Anonymously"}
                   </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => setShowCreatePost(false)}
-                  >
+                  <Button variant="outline" onClick={() => setShowCreatePost(false)}>
                     Cancel
                   </Button>
                 </div>
@@ -178,25 +241,21 @@ export default function PeerSupportForum() {
           )}
         </div>
 
-        {/* 🔹 Posts List */}
+        {/* Posts List */}
         <div className="space-y-6">
           {posts.map((post) => {
-            const userId = auth.currentUser?.uid
-            const isLiked = userId ? post.likedBy.includes(userId) : false
+            const isLiked = (post.likedBy || []).includes(guestId)
+            const postReplies = replies[post.id] || []
 
             return (
               <Card key={post.id} className="hover:shadow-md transition-shadow">
                 <CardContent className="p-6">
-                  <div className="flex justify-between items-start mb-4">
-                    <div>
-                      <span className="font-medium text-primary">{post.author}</span>
-                      <span className="text-muted-foreground text-sm ml-2">
-                        {post.timestamp}
-                      </span>
-                    </div>
+                  <div className="mb-4">
+                    <span className="font-medium text-primary">{post.author}</span>
+                    <span className="text-muted-foreground text-sm ml-2">{post.createdAt}</span>
                   </div>
 
-                  <p className="text-foreground mb-4 text-pretty">{post.content}</p>
+                  <p className="text-foreground mb-4">{post.content}</p>
 
                   <div className="flex flex-wrap gap-2 mb-4">
                     {post.tags.map((tag, index) => (
@@ -206,20 +265,57 @@ export default function PeerSupportForum() {
                     ))}
                   </div>
 
-                  <div className="flex items-center space-x-4 text-sm text-muted-foreground">
+                  {/* Like button */}
+                  <div className="flex items-center space-x-4 text-sm text-muted-foreground mb-4">
                     <button
                       onClick={() => handleToggleLike(post)}
                       className="flex items-center space-x-1 hover:text-primary transition-colors"
                     >
-                      <Heart
-                        className={`w-4 h-4 ${isLiked ? "fill-black text-black" : ""}`}
-                      />
+                      <Heart className={`w-4 h-4 ${isLiked ? "fill-black text-black" : ""}`} />
                       <span>{post.likes}</span>
                     </button>
                     <div className="flex items-center space-x-1">
                       <MessageCircle className="w-4 h-4" />
-                      <span>{post.replies} replies</span>
                     </div>
+                  </div>
+
+                  {/* Replies */}
+                  <div className="space-y-2 mb-4">
+                    {postReplies.map((reply) => (
+                      <div key={reply.id} className="pl-4 border-l text-sm flex justify-between">
+                        <div>
+                          <span className="font-medium">{reply.author}</span>{" "}
+                          <span className="text-muted-foreground text-xs">{reply.createdAt}</span>
+                          <p>{reply.content}</p>
+                        </div>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => handleDeleteReply(post.id, reply.id)}
+                        >
+                          <Trash className="w-3 h-3 text-red-500" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Reply input */}
+                  <div className="flex space-x-2">
+                    <Textarea
+                      placeholder="Write a reply... (Enter to send, Shift+Enter for new line)"
+                      value={replyInputs[post.id] || ""}
+                      onChange={(e) =>
+                        setReplyInputs((prev) => ({ ...prev, [post.id]: e.target.value }))
+                      }
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && !e.shiftKey) {
+                          e.preventDefault()
+                          handleAddReply(post.id)
+                        }
+                      }}
+                      className="min-h-12 flex-1"
+                    />
+                    <Button onClick={() => handleAddReply(post.id)}>Reply</Button>
                   </div>
                 </CardContent>
               </Card>

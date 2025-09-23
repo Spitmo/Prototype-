@@ -9,7 +9,7 @@ import { useAppStore } from "@/lib/store"
 interface AdminLoginModalProps {
   isOpen: boolean
   onClose: () => void
-  onSuccess?: () => void
+  onSuccess?: () => void // optional callback
 }
 
 export default function AdminLoginModal({ isOpen, onClose, onSuccess }: AdminLoginModalProps) {
@@ -18,7 +18,7 @@ export default function AdminLoginModal({ isOpen, onClose, onSuccess }: AdminLog
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
 
-  const setAdminAuth = useAppStore((state) => state.authenticateAdmin) // ✅ store function
+  const authenticateAdmin = useAppStore((state) => state.authenticateAdmin)
 
   if (!isOpen) return null
 
@@ -35,21 +35,31 @@ export default function AdminLoginModal({ isOpen, onClose, onSuccess }: AdminLog
       const ref = doc(db, "users", userCred.user.uid)
       const snap = await getDoc(ref)
 
-      if (!snap.exists() || snap.data()?.isAdmin !== true) {
+      if (!snap.exists()) {
+        await signOut(auth)
+        setError("No user profile found in Firestore.")
+        setLoading(false)
+        return
+      }
+
+      const data = snap.data()
+      if (data?.isAdmin !== true) {
         await signOut(auth)
         setError("Access denied. Admin privileges required.")
         setLoading(false)
         return
       }
 
-      // ✅ Update global store (isAdminAuthenticated → true)
-      setAdminAuth()
+      // ✅ Store update
+      authenticateAdmin()
+
       // ✅ Success callback
       if (onSuccess) onSuccess()
 
+      // ✅ Close modal
       onClose()
     } catch (err: any) {
-      console.error(err)
+      console.error("Admin login error:", err)
       setError(err.message || "Login failed")
     } finally {
       setLoading(false)

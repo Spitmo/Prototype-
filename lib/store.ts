@@ -3,7 +3,7 @@
 import { create } from "zustand"
 import { persist } from "zustand/middleware"
 import { db } from "@/lib/firebase"
-import { collection, addDoc, updateDoc, doc, onSnapshot } from "firebase/firestore"
+import { collection, addDoc, updateDoc, doc, onSnapshot, Timestamp } from "firebase/firestore"
 
 interface Student {
   id: string
@@ -48,7 +48,6 @@ interface AppState {
   completeAssessment: (student: Student) => Promise<void>
   resetMetrics: () => void
 
-  // 🔥 admin methods
   authenticateAdmin: () => boolean
   setAdminAuthenticated: (v: boolean) => void
   logoutAdmin: () => void
@@ -82,7 +81,10 @@ export const useAppStore = create<AppState>()(
 
       addStudent: async (student) => {
         try {
-          await addDoc(collection(db, "students"), student)
+          await addDoc(collection(db, "students"), {
+            ...student,
+            lastAssessment: student.lastAssessment ? Timestamp.fromDate(student.lastAssessment) : null,
+          })
         } catch (err) {
           console.error("Error adding student:", err)
         }
@@ -92,7 +94,7 @@ export const useAppStore = create<AppState>()(
         try {
           await updateDoc(doc(db, "students", id), {
             ...scores,
-            lastAssessment: new Date(),
+            lastAssessment: Timestamp.fromDate(new Date()),
             riskLevel: calculateRiskLevel(scores.phq9 || 0, scores.gad7 || 0, scores.ghqScore || 0),
           })
         } catch (err) {
@@ -104,7 +106,7 @@ export const useAppStore = create<AppState>()(
         try {
           await addDoc(collection(db, "students"), {
             ...student,
-            lastAssessment: new Date(),
+            lastAssessment: Timestamp.fromDate(new Date()),
             riskLevel: calculateRiskLevel(student.phq9Score || 0, student.gad7Score || 0, student.ghqScore || 0),
           })
 
@@ -120,21 +122,28 @@ export const useAppStore = create<AppState>()(
       },
 
       listenToStudents: () => {
+        if (typeof window === "undefined") return () => {} // ✅ SSR guard
+
         const unsub = onSnapshot(collection(db, "students"), (snapshot) => {
-          const students = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as Student[]
+          const students = snapshot.docs.map((doc) => {
+            const data = doc.data()
+            return {
+              id: doc.id,
+              ...data,
+              lastAssessment: data.lastAssessment?.toDate?.() || null,
+            } as Student
+          })
           set({ students, totalUsers: students.length, registeredUsers: students.length })
         })
+
         return unsub
       },
 
-      // ✅ Admin authentication methods
       setAdminAuthenticated: (v) => set({ isAdminAuthenticated: v }),
-
       authenticateAdmin: () => {
         set({ isAdminAuthenticated: true })
         return true
       },
-
       logoutAdmin: () => set({ isAdminAuthenticated: false }),
 
       incrementChatbotUsage: () => set((s) => ({ chatbotUsage: s.chatbotUsage + 1 })),

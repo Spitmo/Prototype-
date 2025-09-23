@@ -20,15 +20,16 @@ export default function PhoneAuthPopup({ onVerified, onClose }: Props) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  // ✅ Setup reCAPTCHA
   useEffect(() => {
     if (typeof window === "undefined") return
 
     if (!(window as any).recaptchaVerifier) {
       try {
-        ;(window as any).recaptchaVerifier = new (RecaptchaVerifier as any)(
-          "recaptcha-container", // ✅ correct order
-          { size: "invisible" },
-          auth
+        (window as any).recaptchaVerifier = new RecaptchaVerifier(
+          auth,
+          "recaptcha-container",
+          { size: "invisible" }
         )
       } catch (err) {
         console.error("Recaptcha setup error:", err)
@@ -38,7 +39,7 @@ export default function PhoneAuthPopup({ onVerified, onClose }: Props) {
     return () => {
       if ((window as any).recaptchaVerifier) {
         try {
-          (window as any).recaptchaVerifier.clear?.()
+          ;(window as any).recaptchaVerifier.clear?.()
           ;(window as any).recaptchaVerifier.dispose?.()
         } catch {}
         delete (window as any).recaptchaVerifier
@@ -46,6 +47,7 @@ export default function PhoneAuthPopup({ onVerified, onClose }: Props) {
     }
   }, [])
 
+  // ✅ Send OTP
   async function sendOtp() {
     setError(null)
     setLoading(true)
@@ -68,6 +70,7 @@ export default function PhoneAuthPopup({ onVerified, onClose }: Props) {
     }
   }
 
+  // ✅ Verify OTP
   async function verifyOtp() {
     setError(null)
     setLoading(true)
@@ -83,13 +86,16 @@ export default function PhoneAuthPopup({ onVerified, onClose }: Props) {
     }
   }
 
+  // ✅ Close Popup
   function handleClose() {
     setPhone("")
     setOtp("")
     setStep("phone")
     setConfirmation(null)
     setError(null)
-    onClose()
+    if (typeof onClose === "function") {
+      onClose()
+    }
   }
 
   return (
